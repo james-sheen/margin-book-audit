@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "margin-book-audit"
+dynamic = ["version"]
+description = "Of the forecasts a margin book expected, which arrived, which can be scored, and which beat a random walk"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{name = "James Sheen"}]
+keywords = ["forecast", "calibration", "margin", "audit", "arbiter"]
+
+# Stage one -- reading a register, reading a feed, and classifying the pairs
+# three ways -- has no dependency on the engine. That is a claim this package
+# asserts rather than describes: `tests/test_stage_one_is_dependency_free.py`
+# imports every stage-one module with the engine made unimportable and runs the
+# whole classification path.
+dependencies = ["presence-audit>=0.1.8,<0.2"]
+
+[project.optional-dependencies]
+# THE FLOOR IS 0.1.15 AND THE REASON IS A CRASH, not a preference. This package
+# declares `loss_margin: 0` on the forecaster's expected-against-issued balance,
+# because a forecast that was expected and never sent is the finding rather than
+# a rounding error. On every release before 0.1.15, CONSERVATION divided a
+# deficit ratio by that zero, the checker raised, and the imbalance surfaced as
+# `checker_error` -- so on an older engine the model that skips two thirds of
+# its subjects is reported as a broken run instead of a bad model.
+#
+# `battery/probe_pin.py --sweep` is the oracle and re-derives this on a pin
+# change; it is not re-read from here.
+engine = ["arbiter-engine>=0.1.15,<0.2"]
+
+[project.scripts]
+margin-book-audit = "margin_book_audit.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/james-sheen/margin-book-audit"
+Issues = "https://github.com/james-sheen/margin-book-audit/issues"
+Source = "https://github.com/james-sheen/margin-book-audit"
+
+[tool.hatch.version]
+path = "src/margin_book_audit/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/margin_book_audit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

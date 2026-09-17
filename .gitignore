@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# Site-specific hygiene vocabulary. Untracked on purpose: a rule that forbids a
+# private identifier has to name it, so committing this file would publish
+# exactly what it exists to protect. See tools/hygiene_check.py.
+.hygiene-local.json

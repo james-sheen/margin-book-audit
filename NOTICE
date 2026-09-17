@@ -1,0 +1,87 @@
+margin-book-audit
+Copyright 2026 The Arbiter Project Authors
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied.
+
+This project checks a balance-sheet identity: of the filings a period says should
+balance, which do, which cannot be checked, and which do not. The second and third
+are different answers and a reader that reports only a total cannot tell them
+apart.
+
+NO AFFILIATION WITH THE SECURITIES AND EXCHANGE COMMISSION
+
+This project is not affiliated with, endorsed by, sponsored by or connected to the
+United States Securities and Exchange Commission or any other regulator. It is a
+consumer of a dataset the Commission publishes, and nothing more.
+
+This section survived a rename and is not vestigial. The distribution was briefly
+called `sec-balance-audit`, which parses as *an audit by the SEC* -- and that
+reading is why it was renamed, before any release. The name no longer carries the
+regulator; the package still reads the Commission's data and still has the word
+`audit` in it, so both halves of this notice still have work to do.
+
+"AUDIT" HERE IS NOT A FINANCIAL STATEMENT AUDIT
+
+A financial statement audit is a regulated engagement performed by licensed
+auditors under professional standards. This is not one and cannot be one. It reads
+published figures and reports whether a single arithmetic identity holds in them.
+It does not examine records, it does not form an opinion, and nothing it produces
+is an audit opinion, accounting advice or investment advice. A discrepancy it
+reports is an arithmetic fact about what was filed; what that fact means is not a
+question this software answers.
+
+THIRD-PARTY CONTENT: REAL FIGURES, PSEUDONYMOUS FILERS
+
+The files under `evidence/` are DERIVED from the SEC's Financial Statement Data
+Sets, which are United States Government work and carry no copyright. The
+derivation is `battery/fetch_sec_quarter.py`; the source archive is not
+redistributed here.
+
+Every figure in that evidence is as filed, and the discrepancies reported are real
+discrepancies in real published balance sheets. Six of them do not balance. The
+FILERS are not named: accession numbers and registrants carry stable pseudonyms,
+because publishing a list of identified companies beside an arithmetic error is not
+something this package needs to do to make its point. The arithmetic is the
+subject, and who filed it changes no test here.
+
+THAT IS PSEUDONYMITY AND NOT ANONYMITY, and it is not offered as any. The source is
+public and the scheme is positional, so anyone holding the same quarterly file can
+recover the mapping by sorting it, and `--named` emits it directly. What is not
+published here is the mapping.
+
+AND THE PSEUDONYMS ARE THE WEAKER HALF OF THAT, WHICH IS WORTH SAYING PLAINLY. The
+figures are a join key. 93% of the rows here carry a combination of reported values
+unique within the quarter, so a reader holding the same public file can match a row
+to a filer by its numbers alone, without touching the labels at all. No labelling
+scheme closes that and none is claimed to. It was measured rather than assumed, and
+replacing the pseudonyms with an irreversible digest was tried and reverted: it left
+this channel exactly as open, cost the byte-for-byte reproducibility the positional
+scheme exists for, and the prior labelling stayed in the repository's history where
+the figures join the two together anyway.
+
+The figures are reported exactly because a discrepancy of one dollar, rounded, is not
+a report of anything. So the honest statement is the narrow one: this repository is
+not a searchable list of identified companies beside an arithmetic error, and that is
+all the pseudonyms buy.
+
+Nothing in that evidence is an allegation. A balance sheet that does not balance by
+one dollar is a balance sheet that does not balance by one dollar, and what that
+means is not a question this software answers.
+
+Anyone re-deriving the evidence is making requests to sec.gov and is subject to its
+fair-access policy, which requires a declared User-Agent naming a contact. See
+`evidence/README.md`.
+
+DEPENDENCIES, SEPARATELY LICENSED
+
+Stage 1 depends on `presence-audit`, and Stage 2 adds `arbiter-engine` as an
+optional extra. Both are separately licensed under the same terms. This is a
+consumer of them and not a part of either.

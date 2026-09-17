@@ -1,0 +1,82 @@
+{
+  "as_of": "2026-09-17T09:30:00Z",
+  "forecasts": [
+    {
+      "model_id": "garch_v3",
+      "issued_at": "2026-09-17T09:30:00Z",
+      "entity_id": "acct_01",
+      "property": "margin_balance",
+      "horizon_s": 3600,
+      "quantiles": {
+        "q05": 1131463.29,
+        "q50": 1203684.35,
+        "q95": 1275905.41
+      },
+      "assumptions": [
+        "stationary_vol_1d"
+      ]
+    },
+    {
+      "model_id": "garch_v3",
+      "issued_at": "2026-09-17T09:30:00Z",
+      "entity_id": "acct_02",
+      "property": "margin_balance",
+      "horizon_s": 3600,
+      "quantiles": {
+        "q05": 1180949.43,
+        "q50": 1256329.18,
+        "q95": 1331708.93
+      },
+      "assumptions": [
+        "stationary_vol_1d"
+      ]
+    },
+    {
+      "model_id": "garch_v3",
+      "issued_at": "2026-09-17T09:30:00Z",
+      "entity_id": "acct_03",
+      "property": "margin_balance",
+      "horizon_s": 3600,
+      "quantiles": {
+        "q05": 1345611.41,
+        "q50": 1431501.5,
+        "q95": 1517391.59
+      },
+      "assumptions": [
+        "stationary_vol_1d"
+      ]
+    },
+    {
+      "model_id": "lstm_v1",
+      "issued_at": "2026-09-17T09:30:00Z",
+      "entity_id": "acct_04",
+      "property": "margin_balance",
+      "horizon_s": 3600,
+      "mean": 1497408.51,
+      "sigma": 44922.26
+    },
+    {
+      "model_id": "lstm_v1",
+      "issued_at": "2026-09-17T09:30:00Z",
+      "entity_id": "acct_05",
+      "property": "margin_balance",
+      "horizon_s": 3600,
+      "quantiles": {
+        "q05": 1400000.0,
+        "q50": 1480000.0
+      }
+    },
+    {
+      "model_id": "garch_v3",
+      "issued_at": "2026-09-17T09:30:00Z",
+      "entity_id": "acct_99",
+      "property": "margin_balance",
+      "horizon_s": 3600,
+      "quantiles": {
+        "q05": 10.0,
+        "q50": 20.0,
+        "q95": 30.0
+      }
+    }
+  ]
+}
