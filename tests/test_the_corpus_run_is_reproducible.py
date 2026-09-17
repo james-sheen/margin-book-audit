@@ -37,7 +37,15 @@ def test_the_artifact_separates_a_producer_bug_from_a_coverage_gap(capsys):
 
     # The ENGINE says `forecast_missing` for both, because from where it sits
     # they are the same absence. Stage one is what tells them apart.
-    reasons = {(d["reason"], d["entity"]) for d in report["declined"]}
+    #
+    # `.get` on both spellings rather than `["entity"]`: `declined` now carries
+    # three populations, and the envelope's own axiom declines name their
+    # subject `entity_id` where the forecasts leg names it `entity`. The
+    # earlier version indexed one spelling and raised the moment the second
+    # population arrived -- which is a test that passed because half the
+    # evidence was missing.
+    reasons = {(d["reason"], d.get("entity") or d.get("entity_id"))
+               for d in report["declined"]}
     assert ("forecast_missing", "acct_05") in reasons
     assert ("forecast_missing", "acct_06") in reasons
 

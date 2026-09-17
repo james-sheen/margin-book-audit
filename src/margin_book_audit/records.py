@@ -49,6 +49,47 @@ class Account:
 
 
 @dataclass(frozen=True)
+class Register:
+    """The book, and the two facts about the document that carried it.
+
+    A LIST OF NUMBERS IS NOT A SERIES. `history` is bare readings with no
+    times, and the first version of this package handed them to the engine as
+    bare readings -- which stamps them ending at the WALL CLOCK. Run with
+    `--as-of 09:35`, every one of the forty landed hours AFTER the instant
+    being evaluated, and the engine returned all forty inside a one-hour
+    window. Every reading a window axiom saw was from the subject's future.
+
+    So the interval is read from the register or the series is not fed.
+    `history_interval_s` is what a document has to say for its readings to be
+    placeable in time; without it there is no series here, only numbers, and
+    inventing a spacing would be this package deciding how often a desk samples
+    its own book.
+    """
+
+    accounts: Tuple[Account, ...] = ()
+    as_of: Optional[datetime] = None
+    history_interval_s: Optional[float] = None
+
+    @property
+    def history_is_placeable(self) -> bool:
+        return self.as_of is not None and bool(self.history_interval_s)
+
+    def stamped(self, account: Account) -> List[Tuple[datetime, float]]:
+        """`[(when, value), ...]`, oldest first, ending at `as_of`.
+
+        Empty when the document did not say when the readings were taken. The
+        caller reports that rather than falling back to now.
+        """
+        from datetime import timedelta
+        if not self.history_is_placeable or not account.history:
+            return []
+        step = timedelta(seconds=float(self.history_interval_s))
+        last = len(account.history) - 1
+        return [(self.as_of - step * (last - i), value)
+                for i, value in enumerate(account.history)]
+
+
+@dataclass(frozen=True)
 class ForecastRecord:
     """One prediction, exactly as the feed stated it.
 
@@ -82,6 +123,22 @@ def _number(raw: Any) -> Optional[float]:
     except (TypeError, ValueError):
         return None
     return value if value == value and value not in (float("inf"), float("-inf")) else None
+
+
+def read_book(payload: Any) -> Register:
+    """The whole register: the accounts and when the document says it was cut.
+
+    Separate from `read_register` because the accounts alone were all this
+    package took, and the two facts it dropped -- `as_of` and the sampling
+    interval -- are exactly what a reading needs to be placed in time.
+    """
+    accounts = tuple(read_register(payload))
+    if not isinstance(payload, Mapping):
+        return Register(accounts)
+    return Register(
+        accounts,
+        as_of=parse_timestamp(payload.get("as_of")),
+        history_interval_s=_number(payload.get("history_interval_s")))
 
 
 def read_register(payload: Any) -> List[Account]:
@@ -130,14 +187,38 @@ def read_feed(payload: Any) -> List[ForecastRecord]:
         issued_at = parse_timestamp(row.get("issued_at"))
         horizon_s = _number(row.get("horizon_s"))
 
+        # TWO SHAPES IS NOT A CHOICE TO MAKE FOR SOMEBODY. A record carrying
+        # both `quantiles` and `mean`+`sigma` states its distribution twice,
+        # and this used to take the quantiles and say nothing -- so a producer
+        # whose two halves disagreed was scored on one of them, silently, and
+        # the engine (which refuses the record outright) never saw it because
+        # this layer had already picked. Refusing here matches the engine and
+        # keeps the disagreement visible.
+        shapes = [name for name, present in
+                  (("quantiles", bool(quantiles)),
+                   ("samples", len(samples) >= 2),
+                   ("mean+sigma", mean is not None and sigma is not None))
+                  if present]
+
         reason: Optional[str] = None
+        model_id = str(row.get("model_id") or "").strip()
         account_id = str(row.get("entity_id") or row.get("account_id") or "").strip()
         if not account_id:
             reason = "no_account_named"
+        elif not model_id:
+            # NOT DEFAULTED TO A PLACEHOLDER. `unnamed` used to stand in, and
+            # it then travelled into the generated model's `models:` list as
+            # though a producer were called that -- and every anonymous record
+            # pooled into one calibration stratum, which cannot say which model
+            # to stop using. A record that does not say who made it cannot be
+            # scored for its maker.
+            reason = "no_model_named"
         elif issued_at is None:
             reason = "no_issue_time"
         elif horizon_s is None or horizon_s <= 0:
             reason = "no_horizon"
+        elif len(shapes) > 1:
+            reason = "two_distributions_stated"
         elif quantiles:
             if not all(level in quantiles for level in REQUIRED_QUANTILES):
                 reason = "required_quantiles_absent"
@@ -149,7 +230,7 @@ def read_feed(payload: Any) -> List[ForecastRecord]:
             reason = "no_distribution"
 
         out.append(ForecastRecord(
-            model_id=str(row.get("model_id") or "").strip() or "unnamed",
+            model_id=model_id or "unnamed",
             account_id=account_id, prop=str(row.get("property") or "margin_balance"),
             issued_at=issued_at, horizon_s=horizon_s, quantiles=quantiles,
             samples=samples, mean=mean, sigma=sigma, unusable=reason, raw=dict(row)))

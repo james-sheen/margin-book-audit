@@ -1,7 +1,7 @@
 # margin-book-audit
 
 **Of the forecasts a margin book expected, which arrived, which can be scored,
-and which beat a random walk.**
+and whether anything is keeping score.**
 
 A bridge from a desk's forecast feed to
 [`arbiter-engine`](https://github.com/james-sheen/arbiter), built to the method
@@ -44,6 +44,12 @@ exponentially-weighted level with the spread taken from its own residuals. **It
 is not a good forecaster**, and that claim has to be earned per book — against
 the random walk the engine files beside every prediction.
 
+`--self-forecast` runs it **beside** the desk's forecasts, on the pairs the desk
+already covered. It never fills one in. It used to: the predictions were added
+to the feed before the coverage question was asked, so an account whose producer
+sent nothing came out covered and the audit exited clean. A reference that
+answers for the producer it is meant to be measured against is not a control.
+
 ## Use
 
 ```bash
@@ -61,11 +67,41 @@ margin-book-audit register.json feed.json --coverage-only
 both measured from *now*, so a fixture built on the wall clock gives a different
 answer every hour; the corpus runs pass it and live runs do not.
 
+`--expected-from <model_id>` names a producer that owes a forecast for every
+account. Nothing is inferred from the feed: having sent a forecast is not the
+same as owing one, and the engine derived the obligation from its allow-list
+until this package wired the forecaster up and watched two producers get charged
+with a book neither had been asked for.
+
+## What a register has to say
+
+```json
+{ "as_of": "2026-09-17T09:30:00Z", "history_interval_s": 900, "accounts": [...] }
+```
+
+`history` on an account is a list of numbers, and **a list of numbers is not a
+series**. Without `as_of` and `history_interval_s` there is no way to place the
+readings in time, so they are not fed and the report says which key was missing.
+That is not fussiness: fed as bare readings they are stamped ending at the wall
+clock, and a run evaluated at 09:35 was handed forty readings taken after 15:00
+and treated them as the hour before.
+
 Exit codes follow the shared contract: `0` clean, `1` something needs attention,
 `2` the audit did not complete. Which decline floors at which code is a domain
 judgement, so this repository keeps its own table in `floors.py` with a reason
 on every row — and a test asserts the table covers the engine's published
 vocabulary exactly, in both directions.
+
+## What it cannot tell you yet
+
+**Whether anything beat the random walk.** A forecast is scored when its horizon
+passes and the outcome is observed; on an hourly horizon a single run scores
+nothing, and every rate in the `calibration` block comes back null. What the run
+*can* say is whether the race was set up — `reference.yardsticks` counts the
+random walks the engine filed, one per forecast, on the same series and the same
+horizon. Reported with its nulls rather than omitted, because a missing
+calibration block and one full of nulls read the same to a human and mean
+opposite things to a gate.
 
 ## Evidence
 
@@ -80,17 +116,21 @@ Rungs 3 and 4 are honestly unclimbed. Nothing here has seen a real margin book.
 
 ## The pin
 
-The engine extra is `>=0.1.15,<0.2`, and the floor is a crash rather than a
-preference: this package declares `loss_margin: 0` on the forecaster's
-expected-against-issued balance, and on every earlier release CONSERVATION
-divided by that zero and reported a model skipping two thirds of its subjects as
-a broken run. `battery/probe_pin.py --sweep` re-derives the floor on any pin
-change; it is measured, not read.
+The engine extra is `>=0.1.16,<0.2`, and the floor is a crash rather than a
+preference. Three things this package now reads do not exist below it:
 
-**Measured 2026-09-17, not reasoned about.** The sweep installs 0.1.15 and runs
-this suite against it — pass. It then installs 0.1.14, the highest release below
-the floor, and runs the same suite — fail. The control is what makes the claim
-worth anything: the floor is here because the release below it is genuinely
-broken for this package, not because a design note said so.
+- `check` does not mount the `shadow` leg, so every shadow row in `floors.py`
+  is unreachable and a forecast the engine refused to judge reports as clean;
+- `model_describe` does not carry `dropped_declarations`, so the generated
+  model's read-back finds nothing and passes for a model the loader rejected;
+- `project` reads a `{from_property:}` bound as no bound at all, so the floor
+  every account is held to cannot be projected against.
+
+`battery/probe_pin.py --sweep` re-derives the floor on any pin change; it is
+measured, not read. It installs the pinned release and runs this suite — pass —
+then installs the highest release below the floor and runs the same suite —
+fail. The control is what makes the claim worth anything: the floor is here
+because the release below it is genuinely broken for this package, not because
+a design note said so.
 
 Apache-2.0.

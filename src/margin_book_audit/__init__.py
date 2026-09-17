@@ -11,9 +11,9 @@ domain knowledge by that division, which is why `forecaster.py` is in this
 package and nothing like it is in the engine.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 #: The engine range this package is built against and has been measured on.
 #: `battery/probe_pin.py --sweep` is the oracle; `pyproject.toml` carries the
 #: same range and the two are pinned equal by `tests/test_pin_is_one_number.py`.
-ENGINE_RANGE = ">=0.1.15,<0.2"
+ENGINE_RANGE = ">=0.1.16,<0.2"

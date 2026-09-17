@@ -20,17 +20,32 @@ keywords = ["forecast", "calibration", "margin", "audit", "arbiter"]
 dependencies = ["presence-audit>=0.1.8,<0.2"]
 
 [project.optional-dependencies]
-# THE FLOOR IS 0.1.15 AND THE REASON IS A CRASH, not a preference. This package
-# declares `loss_margin: 0` on the forecaster's expected-against-issued balance,
-# because a forecast that was expected and never sent is the finding rather than
-# a rounding error. On every release before 0.1.15, CONSERVATION divided a
-# deficit ratio by that zero, the checker raised, and the imbalance surfaced as
-# `checker_error` -- so on an older engine the model that skips two thirds of
-# its subjects is reported as a broken run instead of a bad model.
+# THE FLOOR IS 0.1.16 AND THE REASON IS MEASURED, not a preference. Three
+# things this package reads do not exist below it:
+#
+#   - `check` does not mount the `shadow` leg, so every shadow row in
+#     `floors.py` is unreachable and a forecast the engine REFUSED to judge is
+#     reported as a forecast with nothing wrong;
+#   - `model_describe` does not carry `dropped_declarations`, so the generated
+#     model's read-back finds nothing and passes for a model whose declarations
+#     the loader rejected -- the gate cannot fire at all;
+#   - `project` reads a `{from_property:}` bound as no bound, so the floor each
+#     account is actually held to cannot be projected against.
+#
+# MEASURED 2026-09-17: this suite against 0.1.16 passes; against 0.1.15, the
+# highest release below the floor, 43 tests fail. The control is what makes the
+# claim worth anything -- a floor whose predecessor also passes is a floor
+# somebody guessed.
+#
+# The previous floor was 0.1.15 and its reason was a crash: `loss_margin: 0` on
+# the forecaster's expected-against-issued balance divided a deficit ratio by
+# zero on every earlier release, so a model skipping two thirds of its subjects
+# surfaced as a broken run. That reason still holds; it is no longer the
+# binding one.
 #
 # `battery/probe_pin.py --sweep` is the oracle and re-derives this on a pin
 # change; it is not re-read from here.
-engine = ["arbiter-engine>=0.1.15,<0.2"]
+engine = ["arbiter-engine>=0.1.16,<0.2"]
 
 [project.scripts]
 margin-book-audit = "margin_book_audit.cli:main"

@@ -53,6 +53,7 @@ class Result:
     findings: List[Mapping[str, Any]] = field(default_factory=list)
     declines: List[Mapping[str, Any]] = field(default_factory=list)
     leg: Mapping[str, Any] = field(default_factory=dict)
+    shadow: Mapping[str, Any] = field(default_factory=dict)
     incomplete_reason: str = ""
 
     @property
@@ -65,6 +66,18 @@ def _payload(envelope: Any) -> Mapping[str, Any]:
     if not isinstance(raw, Mapping):
         return {}
     return raw.get("payload") if isinstance(raw.get("payload"), Mapping) else raw
+
+
+def _findings_of(payload: Mapping[str, Any]) -> List[Mapping[str, Any]]:
+    """The envelope's OWN findings -- what is true of the book at this instant.
+
+    Read from the payload rather than from a leg, because `check` mounts the
+    legs beside its top-level result and the top-level `findings` list is that
+    result. A forecast breach and a realised breach are deliberately kept apart
+    by the engine (`forecast_` prefixes the first); keeping them apart is not
+    the same as reading only one.
+    """
+    return [f for f in payload.get("findings") or [] if isinstance(f, Mapping)]
 
 
 def _meta(envelope: Any) -> Mapping[str, Any]:
@@ -109,10 +122,45 @@ def read(envelope: Any) -> Result:
                 "how many forecasts were expected; a count of what arrived is "
                 "not a denominator"))
 
-    findings = [f for f in leg.get("findings") or [] if isinstance(f, Mapping)]
-    declines = [d for d in leg.get("not_checked") or [] if isinstance(d, Mapping)]
+    # THREE POPULATIONS, AND READING ONE OF THEM WAS A HOLE THE SIZE OF THE
+    # MODEL. This used to compose the exit code from the `forecasts` leg alone,
+    # which meant the model's own BOUNDEDNESS declaration was evaluated, fired,
+    # and went nowhere. Measured on the corpus with one balance moved below its
+    # requirement: the engine reported `below_critical_threshold:margin_balance`
+    # at severity `critical`, this package reported `findings 0`, and with the
+    # feed complete the run exited CLEAN. An audit of a margin book that cannot
+    # say an account is under its margin is not a narrower audit; it is the
+    # wrong one.
+    #
+    #   - the FORECASTS leg: did the producer send what was expected
+    #   - the SHADOW leg: what the eight axioms make of the forecast itself.
+    #     It is a separate key because it is a separate discipline with a
+    #     separate closed vocabulary -- and before the engine mounted it, every
+    #     shadow row in this package's floor table was unreachable.
+    #   - the ENVELOPE's own findings: what is true of the book right now.
+    top = _findings_of(payload)
+    shadow = payload.get("shadow") if isinstance(payload.get("shadow"),
+                                                 Mapping) else {}
+    # The shadow leg's FINDINGS are not added: the engine climbs them into the
+    # forecasts leg by design, so reading both would report every forecast
+    # breach twice and inflate a count a desk acts on. Its DECLINES are the new
+    # information, and were the half being dropped.
+    findings = ([f for f in leg.get("findings") or [] if isinstance(f, Mapping)]
+                + top)
+    declines = ([d for d in leg.get("not_checked") or [] if isinstance(d, Mapping)]
+                + [d for d in shadow.get("not_checked") or []
+                   if isinstance(d, Mapping)]
+                # AND THE ENVELOPE'S OWN. These are the axiom declines -- a
+                # check the model asked for that could not run -- which is the
+                # population this package's floor table was written for and
+                # was not being shown. Every one of the fourteen axiom reasons
+                # has a row and a reason in `floors.py`, and until now not one
+                # of those rows could fire.
+                + [d for d in payload.get("not_checked") or []
+                   if isinstance(d, Mapping)])
     codes = [floor_for_finding(str(f.get("problem_type") or "")) for f in findings]
-    codes += [floor_for_decline(str(d.get("reason") or d.get("kind") or ""))
+    codes += [floor_for_decline(str(d.get("reason") or d.get("kind") or ""),
+                                str(d.get("indicator") or ""))
               for d in declines]
     # COMPOSING NOTHING IS `2` IN THE SHARED RULE, and that is right for LEGS:
     # a battery whose legs were never collected must not read as clean. What is
@@ -125,4 +173,30 @@ def read(envelope: Any) -> Result:
     # reintroduced bug by looking at the expression.
     exit_code = compose(*codes) if codes else CLEAN
     return Result(exit_code=exit_code, schema_version=version,
-                  findings=findings, declines=declines, leg=dict(leg))
+                  findings=findings, declines=declines, leg=dict(leg),
+                  shadow=dict(shadow))
+
+
+def read_projection(envelope: Any) -> Dict[str, Any]:
+    """The `projection` leg, flattened for the report.
+
+    A SEPARATE READER BECAUSE IT IS A SEPARATE VERB. `project` answers *where is
+    this heading*; `check` answers *what is true now*. Its findings do NOT enter
+    the exit code here -- a projected breach is a probability about an hour that
+    has not happened, and flooring a gate on one would have a desk paged for a
+    forecast rather than for a balance. It is reported in full so the desk can
+    decide, which is the division this package keeps everywhere else.
+    """
+    raw = envelope.to_dict() if hasattr(envelope, "to_dict") else envelope
+    if not isinstance(raw, Mapping):
+        return {}
+    leg = raw.get("projection")
+    if not isinstance(leg, Mapping):
+        leg = raw if "checked" in raw else {}
+    return {
+        "checked": dict(leg.get("checked") or {}),
+        "findings": [dict(f) for f in leg.get("findings") or []
+                     if isinstance(f, Mapping)],
+        "not_checked": [dict(d) for d in leg.get("not_checked") or []
+                        if isinstance(d, Mapping)],
+    }

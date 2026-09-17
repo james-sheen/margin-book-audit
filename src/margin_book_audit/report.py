@@ -22,9 +22,15 @@ from .model import Manifest
 
 def build(coverage: Coverage, result: Result, manifest: Manifest,
           unregistered: Sequence[str] = (), *,
-          engine_version: str = "") -> Dict[str, Any]:
+          engine_version: str = "",
+          history: Mapping[str, Any] = None,
+          forecasters: Mapping[str, Any] = None,
+          calibration: Mapping[str, Any] = None,
+          projection: Mapping[str, Any] = None,
+          reference: Mapping[str, Any] = None) -> Dict[str, Any]:
     leg = result.leg or {}
     checked = leg.get("checked") if isinstance(leg.get("checked"), Mapping) else {}
+    shadow = result.shadow or {}
     return {
         "exit_code": result.exit_code,
         "complete": result.complete,
@@ -37,8 +43,37 @@ def build(coverage: Coverage, result: Result, manifest: Manifest,
         "checked": {
             "pairs_expected": coverage.expected,
             "engine_counts": dict(checked),
+            "shadow_counts": dict(shadow.get("checked") or {}),
             "findings": [dict(f) for f in result.findings],
         },
+
+        # THE FORECASTER, AS AN ENTITY. Six figures the engine computed from its
+        # own books: how many forecasts each producer owed and issued, how many
+        # have been scored, and how old the newest one is. Present even when
+        # thin, because a producer with `graded_n` absent has not been measured
+        # -- a different statement from a producer measured and found wanting,
+        # and the two must not share a blank.
+        "forecasters": {k: dict(v) for k, v in (forecasters or {}).items()},
+
+        # WHAT THE SCORES ARE SO FAR, NULLS INCLUDED. A forecast on an hourly
+        # horizon is ungradeable until the hour is up, so a single run scores
+        # nothing and every rate below is null. Reported anyway: an absent
+        # calibration block and one full of nulls read the same to a human and
+        # mean opposite things to a gate.
+        "calibration": dict(calibration or {}),
+
+        # THE COMPARISON THE HEADLINE QUESTION NEEDS. `yardsticks` counts the
+        # random walks the engine filed beside the forecasts it was sent.
+        # Whether anything beat one cannot be answered until those mature; this
+        # says whether the race was set up at all.
+        "reference": dict(reference or {}),
+
+        # WHERE THE BOOK IS HEADING, reported and NOT folded into the exit
+        # code. A projected breach is a probability about an hour that has not
+        # happened; a desk paged for one has been paged for a forecast. Its own
+        # denominator travels with it, because the interesting number is how
+        # many series could not be projected at all.
+        "projection": dict(projection or {}),
 
         # DECLINED -- the engine looked and refused, with its reason verbatim.
         "declined": [dict(d) for d in result.declines],
@@ -53,6 +88,7 @@ def build(coverage: Coverage, result: Result, manifest: Manifest,
                            for p in coverage.by_state(UNSCORABLE)],
             "excluded_from_model": manifest.as_dict()["excluded"],
             "forecast_for_unregistered_account": list(unregistered),
+            "history": dict(history or {}),
         },
     }
 
@@ -72,6 +108,19 @@ def render(report: Mapping[str, Any]) -> str:
         f"  findings            {len(checked['findings'])}",
         f"  declined            {len(report['declined'])}",
     ]
+    history = report["not_established"].get("history") or {}
+    if history and not history.get("placed"):
+        absent = ", ".join(history.get("missing") or ["?"])
+        lines.append(f"  history             not placed in time ({absent} absent)")
+    reference = report.get("reference") or {}
+    if reference.get("yardsticks"):
+        lines.append(f"  yardsticks filed    {reference['yardsticks']}")
+    projection = report.get("projection") or {}
+    if projection.get("checked"):
+        lines.append(f"  projected breaches  "
+                     f"{len(projection.get('findings') or [])} of "
+                     f"{projection['checked'].get('forecasts_issued', 0)} "
+                     f"series projected")
     if not report["complete"]:
         lines.append(f"  reason              {report['incomplete_reason']}")
     return "\n".join(lines)

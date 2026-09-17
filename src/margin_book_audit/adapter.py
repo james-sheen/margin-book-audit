@@ -60,6 +60,14 @@ def from_predictions(predictions: Sequence[Prediction], *, issued_at: str,
         "issued_at": issued_at,
         "horizon_s": horizon_s,
         "quantiles": dict(prediction.quantiles),
+        # THE ASSUMPTION TRAVELS WITH THE RECORD, not only in a comment beside
+        # the code that made it. The spread is scaled by the square root of the
+        # horizon, which is only right if the increments are independent -- a
+        # claim about margin balances that this package is in no position to
+        # make and is therefore obliged to state. A reader scoring this model
+        # against another needs to know it was assumed, and a comment in a file
+        # they do not have is not where they will look.
         "assumptions": ["ewma_level", "empirical_residual_quantiles",
+                        "independent_increments_sqrt_horizon_scaling",
                         f"residuals_n={prediction.residuals_n}"],
     } for prediction in predictions]

@@ -103,8 +103,37 @@ FINDING_FLOORS: Tuple[Tuple[str, int], ...] = (
 DEFAULT_FINDING_FLOOR = FINDINGS
 DEFAULT_DECLINE_FLOOR = INCOMPLETE
 
+#: Indicators whose absence is a COLD START, not an incomplete declaration.
+#:
+#: FOUND BY RUNNING, and it moved a real number. `missing_property` floors at
+#: FINDINGS because a bound whose source never arrived is a check the desk
+#: believes is running and is not -- that reasoning is right and stays. But the
+#: forecaster's calibration figures are absent for a different reason: the
+#: engine omits `coverage_90` and `pinball_loss` until something has MATURED and
+#: been scored, deliberately, because a coverage of 0.0 for a model nobody has
+#: graded reads as catastrophic miscalibration. On an hourly horizon that is
+#: true of every forecast issued in the last hour, so a desk running this for
+#: the first time would see a red gate for an hour and learn to ignore it.
+#:
+#: The same argument the `ungradeable` row already makes, one indicator further
+#: in. Named indicators rather than a blanket softening of the reason, because
+#: the reason is right everywhere else.
+WARMING_UP_INDICATORS: Tuple[str, ...] = ("coverage_90", "pinball_loss",
+                                          "graded_n")
 
-def floor_for_decline(reason: str) -> int:
+
+def floor_for_decline(reason: str, indicator: str = "") -> int:
+    """The exit code a decline floors at, and why `indicator` is a parameter.
+
+    A reason alone was not enough to answer with once the forecaster was
+    actually fed: `missing_property` on a margin requirement and
+    `missing_property` on a coverage rate nobody has scored yet are the same
+    word for a declaration gap and a cold start. The second is expected on
+    every first run and must not floor a gate.
+    """
+    if (reason == "missing_property"
+            and str(indicator) in WARMING_UP_INDICATORS):
+        return CLEAN
     return DECLINE_FLOORS.get(reason, DEFAULT_DECLINE_FLOOR)
 
 
