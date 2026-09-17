@@ -87,9 +87,10 @@ divided by that zero and reported a model skipping two thirds of its subjects as
 a broken run. `battery/probe_pin.py --sweep` re-derives the floor on any pin
 change; it is measured, not read.
 
-**That floor names a release that does not exist yet.** `arbiter-engine` 0.1.15
-carries the fix, and until it is published the sweep correctly reports that the
-range admits nothing on the index and this package cannot be installed. The
-engine ships first; that ordering is a fact about the pin, not a preference.
+**Measured 2026-09-17, not reasoned about.** The sweep installs 0.1.15 and runs
+this suite against it — pass. It then installs 0.1.14, the highest release below
+the floor, and runs the same suite — fail. The control is what makes the claim
+worth anything: the floor is here because the release below it is genuinely
+broken for this package, not because a design note said so.
 
 Apache-2.0.

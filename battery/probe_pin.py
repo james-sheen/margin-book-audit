@@ -95,10 +95,23 @@ def sweep(dist: str, spec: str) -> int:
 
 def _run_suite(dist: str, version: str) -> int:
     with tempfile.TemporaryDirectory() as tmp:
+        # VIRTUALENV FIRST, and this is not a preference. `python -m venv`
+        # fails outright on some hosts -- it does here, with an empty stderr,
+        # so the first version of this probe reported every release as FAIL(90)
+        # and the summary called that *releases in range FAILED*. A harness
+        # that cannot build an environment has measured nothing; saying so is
+        # the whole point of the separate exit code, but only if the harness
+        # tries the thing that works before giving up.
         env = subprocess.run(
-            [sys.executable, "-m", "venv", tmp], capture_output=True)
+            [sys.executable, "-m", "virtualenv", "-q", tmp],
+            capture_output=True)
         if env.returncode:
-            print(f"    could not create an environment: {env.stderr[-300:]!r}")
+            env = subprocess.run(
+                [sys.executable, "-m", "venv", tmp], capture_output=True)
+        if env.returncode:
+            detail = (env.stderr or b"").decode(errors="ignore").strip()
+            print(f"    could not create an environment"
+                  f"{': ' + detail[-300:] if detail else ' (no error text)'}")
             return 90
         pip = pathlib.Path(tmp) / "bin" / "pip"
         py = pathlib.Path(tmp) / "bin" / "python"
