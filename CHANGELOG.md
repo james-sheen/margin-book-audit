@@ -2,6 +2,54 @@
 
 Notable changes to `margin-book-audit`.
 
+## [0.1.3] — 2026-09-18
+
+**A fourth review of the engine, with one finding on this side.** It was
+confirmed and the review's arithmetic was exactly right: the filed interval was
+half the width its own record claimed.
+
+### Fixed
+
+- **The reference forecaster's stated horizon scaling was never applied.**
+  `predict` scales its residual quantiles by `sqrt(steps_ahead)` and the record
+  it files says so -- `independent_increments_sqrt_horizon_scaling` is in its
+  `assumptions` list. The CLI called `predict(account_id, history)` and filed
+  the result at `horizon_s=3600`, so `steps_ahead` stayed at its default of 1
+  and the quantiles were ONE-STEP residuals under a one-hour label. Measured on
+  the shipped corpus, whose `history_interval_s` is 900: an hour is four steps,
+  and every filed interval came out at exactly half the width the assumption
+  implies -- ratio 2.0000 across every account.
+
+  The existing test compared `predict(steps_ahead=1)` against
+  `steps_ahead=9` directly and passed throughout, because the defect was never
+  in the scaling. Nothing passed the argument. The new test goes through
+  `cli.main` and asserts the filed width against the declared interval.
+
+  **A register with no `history_interval_s` now files no reference at all**,
+  rather than one scaled by a guess. This package already refuses to spread
+  undated readings across an invented spacing; inventing the SCALE of the
+  yardstick is the same invention one step along.
+
+### Changed
+
+- **Every engine call now goes through `arbiter_engine.api`.** This package
+  imported `arbiter_engine.forecast` and `arbiter_engine.clock` -- deep paths
+  the engine says may move without a major version -- while declaring a `<0.2`
+  ceiling that reads as a promise about all of 0.1. Nothing was broken; the
+  guarantee was. The engine re-exported the three names onto `api` in 0.1.18,
+  which is what the floor now buys, and a new test fails on any import reaching
+  past `arbiter_engine.__all__`.
+
+- **`no_tolerance` is no longer floored.** The engine withdrew the reason in
+  0.1.18 -- it had no producer -- and this package's own rule caught the stale
+  row immediately: a floor for a reason that cannot happen reads as coverage
+  and is not.
+
+- **Floor `arbiter-engine>=0.1.18,<0.2`**, measured: this suite against 0.1.17
+  fails 47 tests. The comment in `pyproject.toml` now also says HOW the figure
+  was taken, because `battery/probe_pin.py` -- the oracle -- cannot produce it
+  while the floor names a version the index does not carry.
+
 ## [0.1.2] — 2026-09-18
 
 **A second review, and the one finding it filed as untested was real.** It was

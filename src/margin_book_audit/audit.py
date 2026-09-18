@@ -102,7 +102,12 @@ def feed(session: Any, rows: Sequence[Mapping[str, Any]], coverage: Coverage,
     A reference that can fail the audit it is a control inside is not a
     control.
     """
-    from arbiter_engine.forecast import ingest_forecasts
+    # `api`, NOT `arbiter_engine.forecast`. `api` is one of the fourteen
+    # names the engine's `__all__` carries; a deep path may move without a
+    # major version, and this package's `<0.2` ceiling was a promise the
+    # engine had not made for the path it actually called. Re-exported onto
+    # `api` in engine 0.1.18, which is why the floor names it.
+    from arbiter_engine.api import ingest_forecasts
 
     vouched = {(p.account_id, p.prop) for p in coverage.by_state(SCORABLE)}
     eligible = [r for r in rows

@@ -30,3 +30,27 @@ def test_the_engine_is_an_extra_and_not_a_hard_dependency():
     text = PYPROJECT.read_text(encoding="utf-8")
     core = text.split("[project.optional-dependencies]")[0]
     assert "arbiter-engine" not in core
+
+
+def test_the_readme_states_the_same_range():
+    """The THIRD copy, and the one that drifted.
+
+    This file's own premise is that a number written twice will drift, and it
+    compared two places while the range was written in three. The README said
+    `>=0.1.16` through the whole life of the 0.1.17 floor -- a reader deciding
+    whether their install was supported would have been told the wrong thing by
+    the only document written for them, and every test here passed.
+
+    Matched loosely on purpose: the README is prose and may reasonably say the
+    range inside a sentence, in backticks, more than once. What it may not do is
+    state a DIFFERENT one.
+    """
+    readme = (pathlib.Path(__file__).resolve().parents[1]
+              / "README.md").read_text(encoding="utf-8")
+    stated = set(re.findall(r">=0\.\d+\.\d+,<\d+\.\d+", readme))
+    assert stated, "the README states no engine range at all"
+    assert stated == {ENGINE_RANGE}, (
+        f"the README states {sorted(stated)} and the package says "
+        f"{ENGINE_RANGE!r}. Earlier floors belong in prose that names the "
+        f"version without restating the range, or this goes red every time "
+        f"one is recorded.")

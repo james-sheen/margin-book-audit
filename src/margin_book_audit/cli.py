@@ -15,6 +15,12 @@ from typing import Optional, Sequence
 from . import ENGINE_RANGE, __version__
 from .floors import CLEAN, INCOMPLETE
 
+#: How far ahead the reference forecaster and the engine's projection both
+#: look. One literal, because these two numbers have to agree: the reference
+#: is filed as a yardstick for the projection, and a yardstick measured over a
+#: different span is not one. It was written out twice.
+REFERENCE_HORIZON_S = 3600.0
+
 
 def _parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -127,11 +133,29 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     reference_rows = []
     if args.self_forecast:
         issued = at or book.as_of or datetime.now(timezone.utc).replace(tzinfo=None)
-        predictions = [p for p in
-                       (predict(a.account_id, a.history) for a in included)
-                       if p is not None]
-        reference_rows = from_predictions(
-            predictions, issued_at=issued.isoformat(), horizon_s=3600.0)
+        # THE HORIZON IN STEPS, which is what `predict` scales by and what the
+        # CLI never passed. `steps_ahead` defaulted to 1, so the filed
+        # quantiles were ONE-STEP residuals -- fifteen minutes on this corpus
+        # -- carried under a one-hour label, with the record's own
+        # `assumptions` list naming the square-root scaling its producer had
+        # not applied. Measured on the shipped corpus: every interval exactly
+        # half the width the stated assumption implies.
+        #
+        # NOT FED AT ALL when the interval is unknown, rather than guessed. A
+        # register that does not say how far apart its readings are cannot say
+        # how many steps an hour is, and an undated register is already not
+        # fed for the same reason -- a yardstick whose scale is invented is
+        # worse than no yardstick, because the comparison still prints.
+        interval_s = book.history_interval_s
+        if interval_s:
+            steps = REFERENCE_HORIZON_S / float(interval_s)
+            predictions = [p for p in
+                           (predict(a.account_id, a.history, steps_ahead=steps)
+                            for a in included)
+                           if p is not None]
+            reference_rows = from_predictions(
+                predictions, issued_at=issued.isoformat(),
+                horizon_s=REFERENCE_HORIZON_S)
 
     if args.coverage_only:
         from .audit import Result
@@ -141,8 +165,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return CLEAN
 
     try:
-        from arbiter_engine.api import EngineSession, check, project
-        from arbiter_engine.forecast import feed_model_figures
+        from arbiter_engine.api import (
+            EngineSession, check, feed_model_figures, project,
+        )
         from .audit import feed, read, read_projection
         from .model import FORECASTER_TYPE
     except ImportError as exc:
@@ -191,7 +216,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return INCOMPLETE
 
     from contextlib import nullcontext
-    from arbiter_engine.clock import as_of
+    from arbiter_engine.api import as_of
     frame = as_of(at) if at is not None else nullcontext()
     with frame:
         fed = feed(session, rows, coverage, at=at)
@@ -219,7 +244,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         # forecast and its own random walk, and running it first would put the
         # engine's records in the ledger before the producers' with nothing
         # gained.
-        projection = read_projection(project(session, horizon_s=3600.0))
+        projection = read_projection(
+            project(session, horizon_s=REFERENCE_HORIZON_S))
         result = read(check(session))
         calibration = dict(session.ledger.calibration())
     engine_version = ""

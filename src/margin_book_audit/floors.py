@@ -59,7 +59,13 @@ DECLINE_FLOORS: Dict[str, int] = {
     "wrong_indicator_type": FINDINGS,
     "no_report_probability": FINDINGS,
     "tail_not_declared": FINDINGS,
-    "no_tolerance": FINDINGS,
+    # `no_tolerance` was floored here until the engine withdrew it in 0.1.18.
+    # It named a point prediction with no declared tolerance, and the engine's
+    # forecast contract takes three shapes that all become quantiles -- a mean
+    # without a sigma is refused before any decline exists. So the member had
+    # no producer, and the rule below caught the floor the moment it went:
+    # a floor for a reason that cannot happen reads as coverage and is not.
+    # It comes back if a point-forecast shape ever lands.
 
     # ---- the coverage gap this package exists to report ------------------
     # The register said a forecast was expected here and none arrived. This is

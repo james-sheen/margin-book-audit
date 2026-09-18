@@ -20,8 +20,35 @@ keywords = ["forecast", "calibration", "margin", "audit", "arbiter"]
 dependencies = ["presence-audit>=0.1.8,<0.2"]
 
 [project.optional-dependencies]
-# THE FLOOR IS 0.1.17 AND THE REASON IS MEASURED, not a preference. One thing
+# THE FLOOR IS 0.1.18 AND THE REASON IS MEASURED, not a preference. One thing
 # this package needs does not exist below it:
+#
+#   - `api.ingest_forecasts`, `api.feed_model_figures` and `api.as_of` are not
+#     there. The calls themselves are older; what 0.1.18 adds is their
+#     presence on `api`, which is the SUPPORTED surface -- one of the fourteen
+#     names the engine's `__all__` carries. This package reached them through
+#     `arbiter_engine.forecast` and `arbiter_engine.clock`, deep paths the
+#     engine's README says may move without a major version. So the `<0.2`
+#     ceiling asserted a promise for paths the engine had not promised, and
+#     the ceiling was the only thing standing between this package and a
+#     silent move. Nothing was broken; the guarantee was.
+#
+# MEASURED 2026-09-18: this suite against 0.1.17, the highest release below
+# the floor, fails 47 tests -- every one of them because the import does not
+# resolve, which is what a floor naming a surface rather than a behaviour
+# looks like when it is honest.
+#
+# HOW, because the method is part of the claim. A clean virtualenv, engine
+# 0.1.17 installed FROM THE INDEX, this package installed `--no-deps`, whole
+# suite run. NOT by `battery/probe_pin.py`, which is the oracle and cannot run
+# this comparison yet: the probe installs every release the range admits and
+# FAILS ON A COULD-NOT-RUN, and the range's floor does not exist on the index
+# until the engine ships. The previous floor's figure was recorded the same way
+# and did not say so -- which left a number in this file that read as the
+# probe's output and could not have been. Re-derive with the probe once 0.1.18
+# is published; until then this is a hand measurement and is labelled as one.
+#
+# The 0.1.17 floor's reason still holds and is no longer the binding one:
 #
 #   - `ingest_forecasts` takes no `source=`, so this package's own reference
 #     forecaster cannot be told apart from a desk's producer. The eight shadow
@@ -32,8 +59,7 @@ dependencies = ["presence-audit>=0.1.8,<0.2"]
 #     whose real balance was above the line. There is no bridge-side fix -- the
 #     findings carry no model id, so nothing downstream can attribute them.
 #
-# MEASURED 2026-09-18: this suite against 0.1.16, the highest release below the
-# floor, fails 13 tests.
+# Measured when it was the binding floor: this suite against 0.1.16 failed 13.
 #
 # The 0.1.16 floor's reasons still hold and are no longer the binding ones.
 # Three things this package reads did not exist below THAT:
@@ -60,10 +86,12 @@ dependencies = ["presence-audit>=0.1.8,<0.2"]
 #
 # `battery/probe_pin.py --sweep` is the oracle and re-derives this on a pin
 # change; it is not re-read from here.
-# NAMES AN UNPUBLISHED VERSION until the engine ships 0.1.17. That is the
+# NAMES AN UNPUBLISHED VERSION until the engine ships 0.1.18. That is the
 # ordering this floor asserts, not an oversight: a clone cannot resolve its
-# engine extra before the release it measures against exists.
-engine = ["arbiter-engine>=0.1.17,<0.2"]
+# engine extra before the release it measures against exists, and this
+# package's CI stays red until it does. The red is the floor telling the
+# truth; re-running it will not clear it.
+engine = ["arbiter-engine>=0.1.18,<0.2"]
 
 [project.scripts]
 margin-book-audit = "margin_book_audit.cli:main"

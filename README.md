@@ -50,6 +50,15 @@ to the feed before the coverage question was asked, so an account whose producer
 sent nothing came out covered and the audit exited clean. A reference that
 answers for the producer it is meant to be measured against is not a control.
 
+**It needs `history_interval_s` and files nothing without it.** The forecast is
+issued at a one-hour horizon, and how many steps an hour is depends on how far
+apart the readings are — on a quarter-hourly book it is four, and the spread is
+scaled by the square root of that. A register that does not say its spacing
+cannot say its scaling, and a yardstick whose width is invented is worse than no
+yardstick because the comparison still prints. This is the same refusal that
+keeps undated readings out of the history: the package will not put its own
+assumption about sampling into somebody else's book.
+
 ## Use
 
 ```bash
@@ -133,15 +142,31 @@ Rungs 3 and 4 are honestly unclimbed. Nothing here has seen a real margin book.
 
 ## The pin
 
-The engine extra is `>=0.1.16,<0.2`, and the floor is a crash rather than a
-preference. Three things this package now reads do not exist below it:
+The engine extra is `>=0.1.18,<0.2`, and every floor this package has had was
+measured rather than preferred. The binding one is a **surface**: `api` is one
+of the fourteen names the engine's `__all__` carries, and
+`api.ingest_forecasts`, `api.feed_model_figures` and `api.as_of` only exist
+there from 0.1.18. Below it this package has to reach into
+`arbiter_engine.forecast` and `arbiter_engine.clock`, which the engine says may
+move without a major version — so the `<0.2` ceiling was claiming a promise for
+paths nobody had promised. Measured: this suite against 0.1.17 fails 47 tests.
 
-- `check` does not mount the `shadow` leg, so every shadow row in `floors.py`
-  is unreachable and a forecast the engine refused to judge reports as clean;
-- `model_describe` does not carry `dropped_declarations`, so the generated
-  model's read-back finds nothing and passes for a model the loader rejected;
-- `project` reads a `{from_property:}` bound as no bound at all, so the floor
-  every account is held to cannot be projected against.
+*This paragraph said `>=0.1.16` while `pyproject.toml` said `0.1.17` — the
+number is stated in three places and the test that exists to stop it drifting
+compared two of them. It compares all three now.*
+
+Earlier floors, each still true and none of them binding any more:
+
+- **0.1.17** — `ingest_forecasts` takes no `source=`, so this package's own
+  reference forecaster could not be told apart from a desk's producer, was
+  judged by the shadow axioms, and took a clean book from `exit 0` to `exit 1`
+  with three `critical` findings;
+- **0.1.16** — `check` does not mount the `shadow` leg, so every shadow row in
+  `floors.py` is unreachable and a forecast the engine refused to judge reports
+  as clean; `model_describe` does not carry `dropped_declarations`, so the
+  generated model's read-back finds nothing and passes for a model the loader
+  rejected; and `project` reads a `{from_property:}` bound as no bound at all,
+  so the floor every account is held to cannot be projected against.
 
 `battery/probe_pin.py --sweep` re-derives the floor on any pin change; it is
 measured, not read. It installs the pinned release and runs this suite — pass —
