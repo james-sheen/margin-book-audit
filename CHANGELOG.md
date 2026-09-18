@@ -2,6 +2,62 @@
 
 Notable changes to `margin-book-audit`.
 
+## [0.1.2] — 2026-09-18
+
+**A second review, and the one finding it filed as untested was real.** It was
+also worse than filed: the review predicted a `forecast_breach` at `high`, and
+what the run produced was that plus a `forecast_below_critical_threshold` at
+severity **critical**.
+
+### Fixed
+
+- **The reference forecaster could fail the audit it is a control inside.**
+  `--self-forecast` files this package's own EWMA so the desk's model can be
+  compared against something. The engine could not tell whose those records
+  were — an outside forecast carries no source — so the eight shadow axioms ran
+  over the reference's own predictions and reported the results against the
+  book. Measured on a clean three-account book, every pair covered and every
+  balance above its requirement: without the flag `exit 0` and `findings 0`;
+  with it, and nothing else changed, `exit 1` and `findings 6`. Three of those
+  were `critical`, naming accounts whose real balance was above the line.
+
+  **There is no fix on this side of the boundary**, which is why the floor
+  moves: the findings carry no model id, so nothing here can attribute them.
+  `arbiter-engine` 0.1.17 takes a `source=` on `ingest_forecasts`, and a record
+  filed with one is kept out of the producer counts and out of the shadow pass.
+  The reference is still filed and still raced against a random walk, so it
+  remains measurable — silencing it by not feeding it would have fixed the exit
+  code and destroyed the feature.
+
+- **The reference was reported as one of the desk's producers.** It sat in
+  `forecasters` keyed by model id with nothing marking it, beside `garch_v3`.
+  Those are producer figures — how old the last submission is, how many arrived
+  against what was owed — and none of those questions have an answer for a model
+  this package runs itself at the instant of the audit. It is described in
+  `reference` now, which carries `model_id`, and it is no longer declared in the
+  generated model's `models:` allow-list, because it is not a producer.
+
+- **`reference.yardsticks` was described as one per forecast.** It is one per
+  forecast THE ENGINE WAS SENT, and with `--self-forecast` the reference's own
+  rows are forecasts too, so the number exceeds the pair count by design.
+
+### Documentation
+
+- **Calibration is structurally unreachable from this CLI, and the README now
+  says so rather than implying a longer horizon would help.** Every run builds a
+  fresh engine session, the engine's ledger is in-memory, and a grade needs the
+  record still to be there when its horizon passes — so the process would have
+  to outlive the horizon, and this one exits. Feeding already-matured forecasts
+  does not work around it: the forecasts leg declines them `stale_forecast`,
+  because it asks whether the producer is current and cannot tell a late
+  forecast from one brought back to be scored.
+
+### Changed
+
+- Engine floor `>=0.1.16` → `>=0.1.17`, measured: this suite fails 13 tests
+  against 0.1.16. **The floor names an unpublished version until the engine
+  ships**, which is the ordering it asserts rather than an oversight.
+
 ## [0.1.1] — 2026-09-17
 
 **Found by running the package against a review of it that ran nothing.** Two of

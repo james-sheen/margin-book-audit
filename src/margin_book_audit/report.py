@@ -66,6 +66,12 @@ def build(coverage: Coverage, result: Result, manifest: Manifest,
         # random walks the engine filed beside the forecasts it was sent.
         # Whether anything beat one cannot be answered until those mature; this
         # says whether the race was set up at all.
+        #
+        # It is ONE PER FILED FORECAST AND NOT ONE PER PAIR, and the two differ
+        # the moment `--self-forecast` is on: the reference's own rows are
+        # forecasts too, and the engine races each of them. `model_id` names
+        # whose reference it was, so a reader of `forecasters` can tell this
+        # package's entrant from the desk's producers.
         "reference": dict(reference or {}),
 
         # WHERE THE BOOK IS HEADING, reported and NOT folded into the exit

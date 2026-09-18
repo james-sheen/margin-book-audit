@@ -20,8 +20,23 @@ keywords = ["forecast", "calibration", "margin", "audit", "arbiter"]
 dependencies = ["presence-audit>=0.1.8,<0.2"]
 
 [project.optional-dependencies]
-# THE FLOOR IS 0.1.16 AND THE REASON IS MEASURED, not a preference. Three
-# things this package reads do not exist below it:
+# THE FLOOR IS 0.1.17 AND THE REASON IS MEASURED, not a preference. One thing
+# this package needs does not exist below it:
+#
+#   - `ingest_forecasts` takes no `source=`, so this package's own reference
+#     forecaster cannot be told apart from a desk's producer. The eight shadow
+#     axioms then run over the reference's predictions and report against the
+#     book: measured on a clean three-account book, `--self-forecast` took the
+#     run from `exit 0, findings 0` to `exit 1, findings 6`, three of them
+#     `forecast_below_critical_threshold` at severity CRITICAL about accounts
+#     whose real balance was above the line. There is no bridge-side fix -- the
+#     findings carry no model id, so nothing downstream can attribute them.
+#
+# MEASURED 2026-09-18: this suite against 0.1.16, the highest release below the
+# floor, fails 13 tests.
+#
+# The 0.1.16 floor's reasons still hold and are no longer the binding ones.
+# Three things this package reads did not exist below THAT:
 #
 #   - `check` does not mount the `shadow` leg, so every shadow row in
 #     `floors.py` is unreachable and a forecast the engine REFUSED to judge is
@@ -45,7 +60,10 @@ dependencies = ["presence-audit>=0.1.8,<0.2"]
 #
 # `battery/probe_pin.py --sweep` is the oracle and re-derives this on a pin
 # change; it is not re-read from here.
-engine = ["arbiter-engine>=0.1.16,<0.2"]
+# NAMES AN UNPUBLISHED VERSION until the engine ships 0.1.17. That is the
+# ordering this floor asserts, not an oversight: a clone cannot resolve its
+# engine extra before the release it measures against exists.
+engine = ["arbiter-engine>=0.1.17,<0.2"]
 
 [project.scripts]
 margin-book-audit = "margin_book_audit.cli:main"

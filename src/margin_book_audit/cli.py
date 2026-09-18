@@ -151,12 +151,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
               file=sys.stderr)
         return INCOMPLETE
 
-    # THE REFERENCE IS A DECLARED PRODUCER WHEN IT IS RUNNING. `models:` says
-    # which ids may submit, and refusing an id this package is about to send
-    # would decline `model_unknown` against ourselves.
+    # THE REFERENCE IS NOT A PRODUCER, and saying it was is what let it fail
+    # the audit. `models:` is the engine's allow-list of ids that may submit;
+    # the reference is now filed under its own `source`, so the engine keeps it
+    # out of the producer population entirely and `model_unknown` cannot be
+    # raised against it. Adding it here would declare a desk model that never
+    # owes anything and never sends anything as a producer.
     producers = {r.model_id for r in records if r.usable}
-    if reference_rows:
-        producers.add(MODEL_ID)
     session = EngineSession()
     session.load_model(build_model(models=sorted(producers),
                                    expected_from=sorted(set(args.expected_from))))
@@ -195,7 +196,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     with frame:
         fed = feed(session, rows, coverage, at=at)
         if reference_rows:
-            reference_fed = feed(session, reference_rows, coverage, at=at)
+            reference_fed = feed(session, reference_rows, coverage,
+                                 at=at, source=MODEL_ID)
         else:
             reference_fed = {}
         # THE FORECASTER IS AN ENTITY LIKE ANY OTHER, which is the claim the
@@ -233,6 +235,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                    calibration=calibration,
                    projection=projection,
                    reference={"fed": int(reference_fed.get("filed", 0)),
+                              # WHOSE it is. `forecasters` is keyed by model
+                              # id and this package's own reference sat in it
+                              # unmarked, beside the desk's producers, as
+                              # though a desk had sent it.
+                              "model_id": MODEL_ID if reference_rows else None,
                               "yardsticks": int(fed.get("baselines", 0))
                                             + int(reference_fed.get("baselines", 0))})
     print(to_json(report) if args.json else render(report))

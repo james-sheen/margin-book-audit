@@ -96,10 +96,27 @@ vocabulary exactly, in both directions.
 
 **Whether anything beat the random walk.** A forecast is scored when its horizon
 passes and the outcome is observed; on an hourly horizon a single run scores
-nothing, and every rate in the `calibration` block comes back null. What the run
+nothing, and every rate in the `calibration` block comes back null.
+
+**And it is not only this horizon: no run of this command can score anything.**
+That is worth stating flatly, because *a single run scores nothing* reads like a
+thing a longer horizon or a patient operator fixes, and it is not. Every run
+builds a fresh engine session, the engine's prediction ledger is in-memory, and a
+grade needs the record still to be in the ledger when its horizon passes — so the
+process would have to outlive the horizon, and this one exits. Feeding forecasts
+that already matured does not work around it: the engine's forecasts leg declines
+them `stale_forecast` against the generated model's `max_age`, because that leg
+asks whether the producer is current and cannot tell a late forecast from one
+brought back to be scored. So `calibration` is structurally null here, and the
+block is still printed — an absent block and a null one read the same to a human
+and mean opposite things to a gate. Scoring needs a resident process or a durable
+ledger in the engine; neither exists today. What the run
 *can* say is whether the race was set up — `reference.yardsticks` counts the
-random walks the engine filed, one per forecast, on the same series and the same
-horizon. Reported with its nulls rather than omitted, because a missing
+random walks the engine filed, **one per forecast it was sent**, on the same
+series and the same horizon. Not one per account: with `--self-forecast` the
+reference's own rows are forecasts too and each gets its own, so the number
+exceeds the pair count by design. `reference.model_id` names this package's
+entrant so it can be told apart from the desk's producers in `forecasters`. Reported with its nulls rather than omitted, because a missing
 calibration block and one full of nulls read the same to a human and mean
 opposite things to a gate.
 

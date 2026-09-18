@@ -87,14 +87,29 @@ def _meta(envelope: Any) -> Mapping[str, Any]:
 
 
 def feed(session: Any, rows: Sequence[Mapping[str, Any]], coverage: Coverage,
-         *, at: Any = None) -> Dict[str, Any]:
-    """Ingest only the rows stage one vouched for. Returns the engine's tally."""
+         *, at: Any = None, source: Any = None) -> Dict[str, Any]:
+    """Ingest only the rows stage one vouched for. Returns the engine's tally.
+
+    `source` NAMES WHO FILED THESE. A producer's rows leave it `None`; this
+    package's own reference forecaster passes its id, and the engine then keeps
+    those records out of the producer counts and out of the shadow axiom pass.
+
+    Without it the reference was a producer as far as the engine could tell,
+    and the eight axioms ran over ITS predictions: on a clean book, switching
+    `--self-forecast` on took the run from `exit 0, findings 0` to `exit 1,
+    findings 6` -- three of them `forecast_below_critical_threshold` at
+    severity CRITICAL, about accounts whose real balance was above the line.
+    A reference that can fail the audit it is a control inside is not a
+    control.
+    """
     from arbiter_engine.forecast import ingest_forecasts
 
     vouched = {(p.account_id, p.prop) for p in coverage.by_state(SCORABLE)}
     eligible = [r for r in rows
                 if (r.get("entity_id"), r.get("property")) in vouched]
-    return dict(ingest_forecasts(session, eligible, at=at))
+    if source is None:
+        return dict(ingest_forecasts(session, eligible, at=at))
+    return dict(ingest_forecasts(session, eligible, at=at, source=source))
 
 
 def read(envelope: Any) -> Result:
