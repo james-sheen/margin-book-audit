@@ -16,4 +16,4 @@ __version__ = "0.1.3"
 #: The engine range this package is built against and has been measured on.
 #: `battery/probe_pin.py --sweep` is the oracle; `pyproject.toml` carries the
 #: same range and the two are pinned equal by `tests/test_pin_is_one_number.py`.
-ENGINE_RANGE = ">=0.1.18,<0.2"
+ENGINE_RANGE = ">=0.2.4,<0.3"

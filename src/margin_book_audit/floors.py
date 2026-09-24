@@ -72,6 +72,19 @@ DECLINE_FLOORS: Dict[str, int] = {
     # the finding, not a technicality.
     "forecast_missing": FINDINGS,
 
+    # ---- the control working, and the engine saying so -------------------
+    # `not_a_producers_submission` arrives with engine 0.2 and it fires on THIS
+    # package's own doing. `--self-forecast` files the reference forecaster's
+    # rows with a `source=` for exactly one reason: to keep the eight shadow
+    # axioms off them, because a reference that can fail the audit it is a
+    # control inside is not a control. 0.2 names that set-aside instead of
+    # performing it silently, which is an improvement and is not a gap in the
+    # book -- so CLEAN. The count still rides in the report, and a run where it
+    # is zero with `--self-forecast` on would mean the set-aside stopped
+    # happening, which is the failure this floor must not hide.
+
+    "not_a_producers_submission": CLEAN,
+
     # ---- a producer problem ----------------------------------------------
     # The feed and the model file disagree about what is being sent.
     "model_unknown": FINDINGS,

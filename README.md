@@ -142,14 +142,23 @@ Rungs 3 and 4 are honestly unclimbed. Nothing here has seen a real margin book.
 
 ## The pin
 
-The engine extra is `>=0.1.18,<0.2`, and every floor this package has had was
-measured rather than preferred. The binding one is a **surface**: `api` is one
-of the fourteen names the engine's `__all__` carries, and
-`api.ingest_forecasts`, `api.feed_model_figures` and `api.as_of` only exist
-there from 0.1.18. Below it this package has to reach into
+The engine extra is `>=0.2.4,<0.3`, and every floor this package has had was
+measured rather than preferred. The binding one is now a **decline**:
+`not_a_producers_submission` arrives with engine 0.2 and fires on this
+package's own doing — `--self-forecast` files the reference forecaster's rows
+with a `source=` precisely to keep the eight shadow axioms off them. This
+package fails closed on a decline it has no floor for, so on 0.2.4 seven tests
+reported a broken audit for a book that was merely being controlled. The floor
+is CLEAN and it is version-coupled both ways: with the row present the suite is
+red on 0.1.18, measured, because a floor for a reason the engine cannot emit
+reads as coverage and is not. The pin and the floor are one change.
+
+The previous floor was a **surface**: `api.ingest_forecasts`,
+`api.feed_model_figures` and `api.as_of` only exist on the supported surface
+from 0.1.18, and below it this package had to reach into
 `arbiter_engine.forecast` and `arbiter_engine.clock`, which the engine says may
-move without a major version — so the `<0.2` ceiling was claiming a promise for
-paths nobody had promised. Measured: this suite against 0.1.17 fails 47 tests.
+move without a major version. Measured then: this suite against 0.1.17 failed
+47 tests. That reason still holds and is no longer the binding one.
 
 *This paragraph said `>=0.1.16` while `pyproject.toml` said `0.1.17` — the
 number is stated in three places and the test that exists to stop it drifting

@@ -86,12 +86,27 @@ dependencies = ["presence-audit>=0.1.8,<0.2"]
 #
 # `battery/probe_pin.py --sweep` is the oracle and re-derives this on a pin
 # change; it is not re-read from here.
-# NAMES AN UNPUBLISHED VERSION until the engine ships 0.1.18. That is the
-# ordering this floor asserts, not an oversight: a clone cannot resolve its
-# engine extra before the release it measures against exists, and this
-# package's CI stays red until it does. The red is the floor telling the
-# truth; re-running it will not clear it.
-engine = ["arbiter-engine>=0.1.18,<0.2"]
+# The paragraph that used to sit here said this floor NAMED AN UNPUBLISHED
+# VERSION and that CI would stay red until the engine shipped 0.1.18. It did
+# ship; the sentence outlived its condition and is gone rather than left to
+# read as current.
+#
+# THE CEILING MOVED TO 0.2 ON A MEASUREMENT, 2026-09-24, AND IT COULD NOT MOVE
+# ALONE. On 0.2.4 the shadow leg gained `not_a_producers_submission`, which
+# fires on this package's own doing: `--self-forecast` files the reference
+# forecaster's rows with a `source=` precisely so the eight axioms stay off
+# them. `floors.py` had no rule for a reason that did not exist when it was
+# written, and this package fails CLOSED on an unruled decline -- so seven
+# tests reported a broken audit for a book that was merely being controlled.
+#
+# The floor for it is CLEAN and it is version-coupled in BOTH directions:
+# `test_no_floor_rules_on_a_reason_that_cannot_happen` fails on 0.1.18 with the
+# row present, measured. The pin and the floor are therefore one change, and
+# splitting them reddens whichever half lands first.
+#
+# Measured on 0.2.4 with the row: 168 passed, the same figure 0.1.18 reported
+# without it.
+engine = ["arbiter-engine>=0.2.4,<0.3"]
 
 [project.scripts]
 margin-book-audit = "margin_book_audit.cli:main"
