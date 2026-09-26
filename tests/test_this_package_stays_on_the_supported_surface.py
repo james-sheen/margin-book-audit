@@ -27,9 +27,19 @@ from conftest import needs_engine
 SOURCE = pathlib.Path(__file__).resolve().parents[1] / "src" / "margin_book_audit"
 
 #: Deep paths this package is knowingly allowed to import, each with the reason
-#: it could not be spelled through a supported name. Empty, and that is the
-#: point: every engine call this package makes now goes through `api`.
-SANCTIONED_DEEP_IMPORTS: dict[str, str] = {}
+#: it could not be spelled through a supported name. Every engine CALL still
+#: goes through `api`; the one entry is not a call into the engine but a
+#: producer that happens to ship inside its wheel.
+SANCTIONED_DEEP_IMPORTS: dict[str, str] = {
+    "arbiter_engine.producers.baseline_learner": (
+        "The engine's reference producer, behind `--learner`. The engine's "
+        "STANCE.md and its 0.2.7 changelog name this module as the producer the "
+        "package ships, and nothing re-exports it: a producer reaches the engine "
+        "the way any outside forecaster does, so it is deliberately not part of "
+        "`api`. The path is therefore unpromised across a minor release -- if it "
+        "moves, `--learner` files nothing and the report says why, and the audit "
+        "is unaffected. Imported inside the one function that uses it."),
+}
 
 
 def _engine_imports():

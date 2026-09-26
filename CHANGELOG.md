@@ -2,6 +2,36 @@
 
 Notable changes to `margin-book-audit`.
 
+## [Unreleased]
+
+**Nothing this package filed had ever been graded.** Every forecast a run files
+matures an hour after the instant it audits, and the engine's default ledger
+dies with the process -- measured on the shipped corpus, 22 recorded, 22
+pending, 0 graded.
+
+### Added
+
+- **`--ledger PATH`** keeps what a run files in a SQLite ledger, so the next
+  audit of the same book grades every record whose hour has passed, against
+  that later register's own history. The text report prints one CRPS line per
+  graded model, ordered by name, with its count and whose it is.
+- **`--learner`** files the engine's reference producer, a damped-trend
+  smoother, beside the desk's forecasts as a second yardstick: fed only for the
+  pairs the desk covered, filed under its own `source`, scored and never judged.
+
+### Fixed
+
+- **Two sentences described an engine this package never ran on.** The README
+  said no run could score anything because the engine had no durable ledger; it
+  has had one as a supported name since 0.2.6. The README and `report.py` said
+  the engine files one random walk per forecast; it files one per pair and
+  instant, and answers the rest `already_filed` -- measured on 0.2.4 and 0.2.9.
+
+### Changed
+
+- **The engine floor is 0.2.7**, the first release carrying the learner.
+  Measured: 5 tests fail against 0.2.6, all of them the learner's.
+
 ## [0.1.3] — 2026-09-18
 
 **A fourth review of the engine, with one finding on this side.** It was

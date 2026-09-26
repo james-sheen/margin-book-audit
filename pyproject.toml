@@ -106,7 +106,20 @@ dependencies = ["presence-audit>=0.1.8,<0.2"]
 #
 # Measured on 0.2.4 with the row: 168 passed, the same figure 0.1.18 reported
 # without it.
-engine = ["arbiter-engine>=0.2.4,<0.3"]
+#
+# THE FLOOR ROSE TO 0.2.7 ON 2026-09-26, and what binds it is a flag: `--learner`
+# files the engine's own reference producer, `baseline_learner`, which first
+# shipped in 0.2.7. MEASURED: this suite against 0.2.6, the highest release
+# below the floor, fails 5 tests, every one of them a test of the learner --
+# the ledger half of the same change passes there. `battery/probe_pin.py
+# --sweep` passes 0.2.7, 0.2.8 and 0.2.9 and fails the control.
+#
+# NOT 0.2.9, which is what the review that asked for the learner proposed. 0.2.9
+# fixed grading through a durable OBSERVATION store; this package keeps the
+# LEDGER durable and takes each audit's readings from its own register, whose
+# history holds the reading a matured forecast is graded against. Measured: the
+# same two-audit bench grades identically on 0.2.7 and 0.2.9.
+engine = ["arbiter-engine>=0.2.7,<0.3"]
 
 [project.scripts]
 margin-book-audit = "margin_book_audit.cli:main"

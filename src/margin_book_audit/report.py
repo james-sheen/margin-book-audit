@@ -27,7 +27,10 @@ def build(coverage: Coverage, result: Result, manifest: Manifest,
           forecasters: Mapping[str, Any] = None,
           calibration: Mapping[str, Any] = None,
           projection: Mapping[str, Any] = None,
-          reference: Mapping[str, Any] = None) -> Dict[str, Any]:
+          reference: Mapping[str, Any] = None,
+          learner: Mapping[str, Any] = None,
+          ledger: str = None,
+          producers: Sequence[str] = ()) -> Dict[str, Any]:
     leg = result.leg or {}
     checked = leg.get("checked") if isinstance(leg.get("checked"), Mapping) else {}
     shadow = result.shadow or {}
@@ -67,12 +70,31 @@ def build(coverage: Coverage, result: Result, manifest: Manifest,
         # Whether anything beat one cannot be answered until those mature; this
         # says whether the race was set up at all.
         #
-        # It is ONE PER FILED FORECAST AND NOT ONE PER PAIR, and the two differ
-        # the moment `--self-forecast` is on: the reference's own rows are
-        # forecasts too, and the engine races each of them. `model_id` names
-        # whose reference it was, so a reader of `forecasters` can tell this
-        # package's entrant from the desk's producers.
+        # It is ONE PER PAIR AND INSTANT, NOT ONE PER FORECAST. The engine files
+        # a random walk beside the first forecast it receives for a pair and
+        # answers every later one `already_filed`, so the reference and the
+        # learner race the walk the desk's forecast already got. This comment
+        # said the opposite until 2026-09-26, and no engine this package has
+        # admitted behaved that way -- measured on 0.2.4 and 0.2.9. `model_id`
+        # names whose reference it was, so a reader of `forecasters` can tell
+        # this package's entrant from the desk's producers.
         "reference": dict(reference or {}),
+
+        # THE SECOND YARDSTICK, the engine's own reference producer, filed only
+        # when asked. `reason` is present whenever it filed nothing: an absent
+        # learner and one that ran and found nothing to forecast must not
+        # share a blank.
+        "learner": dict(learner or {}),
+
+        # WHO EACH SCORED MODEL IS, so a reader does not have to know which
+        # ids were the desk's. `ledger` is null when nothing this run filed
+        # outlives it -- which is why a single run's scores are all null.
+        "scored": {
+            "ledger": ledger,
+            "producers": list(producers),
+            "reference": (reference or {}).get("model_id"),
+            "learner": (learner or {}).get("model_id"),
+        },
 
         # WHERE THE BOOK IS HEADING, reported and NOT folded into the exit
         # code. A projected breach is a probability about an hour that has not
@@ -127,9 +149,54 @@ def render(report: Mapping[str, Any]) -> str:
                      f"{len(projection.get('findings') or [])} of "
                      f"{projection['checked'].get('forecasts_issued', 0)} "
                      f"series projected")
+    learner = report.get("learner") or {}
+    if learner and not learner.get("fed"):
+        lines.append(f"  learner             filed nothing -- {learner.get('reason', '?')}")
+    lines.extend(_score_lines(report))
     if not report["complete"]:
         lines.append(f"  reason              {report['incomplete_reason']}")
     return "\n".join(lines)
+
+
+def _score_lines(report: Mapping[str, Any]) -> List[str]:
+    """What the ledger has graded so far, one line per model, with its count.
+
+    ORDERED BY NAME, NOT BY SCORE. The engine scores producers and does not
+    rank them, and neither does this: a lower CRPS is a closer forecast of what
+    happened, and the count beside it says how much happened.
+
+    NOTHING GRADED IS SAID IN WORDS, never as a zero. Every forecast a run files
+    matures after the instant it audits, so one run on its own grades nothing,
+    and a zero would read as a measurement.
+    """
+    calibration = report.get("calibration") or {}
+    if not calibration:
+        return []
+    scored = report.get("scored") or {}
+    recorded = int(calibration.get("recorded") or 0)
+    graded = int(calibration.get("confirmed") or 0) + int(calibration.get("falsified") or 0)
+    if not graded:
+        later = ("audit this book again after they mature, against the same --ledger"
+                 if scored.get("ledger") else
+                 "nothing filed here outlives this run; pass --ledger PATH")
+        return [f"  graded              none of {recorded} filed -- each matures "
+                f"after the instant audited; {later}"]
+    extra = [f"{n} {state}" for state, n in
+             (("pending", int(calibration.get("pending") or 0)),
+              ("ungradeable", int(calibration.get("ungradeable") or 0))) if n]
+    lines = [f"  graded              {graded} of {recorded} filed"
+             + (f" ({', '.join(extra)})" if extra else "")]
+    roles = {model: "desk" for model in scored.get("producers") or ()}
+    if scored.get("reference"):
+        roles[scored["reference"]] = "this package's reference"
+    if scored.get("learner"):
+        roles[scored["learner"]] = "the engine's learner"
+    for model, row in sorted((calibration.get("by_model") or {}).items()):
+        if row.get("crps_approx") is None:
+            continue
+        role = f", {roles[model]}" if model in roles else ""
+        lines.append(f"  crps {row['crps_approx']:<14.6g} {model} (n={row.get('n')}{role})")
+    return lines
 
 
 def to_json(report: Mapping[str, Any]) -> str:

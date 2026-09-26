@@ -44,6 +44,18 @@ def _parser() -> argparse.ArgumentParser:
                         "cannot close a coverage hole -- a reference that "
                         "filled in for an absent producer would be this "
                         "package answering its own question.")
+    p.add_argument("--learner", action="store_true",
+                   help="file the engine's reference producer -- a damped-trend "
+                        "smoother, a harder opponent than the random walk -- "
+                        "beside the desk's forecasts, on the pairs the desk "
+                        "already covered. Set aside like the reference: it is "
+                        "scored and never judged, and it never closes a hole.")
+    p.add_argument("--ledger", metavar="PATH",
+                   help="keep every forecast this run files in a SQLite ledger, "
+                        "so a LATER audit of the same book grades the ones that "
+                        "have matured. A single run grades nothing: each "
+                        "forecast here matures an hour after the instant it "
+                        "audits.")
     p.add_argument("--expected-from", metavar="MODEL_ID", action="append",
                    default=[],
                    help="a producer that owes a forecast for EVERY account. "
@@ -131,8 +143,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     rows, _refused = from_records(records)
     reference_rows = []
+    # One issue instant for both yardsticks, so the reference and the learner
+    # are forecasts of the same hour and their scores compare.
+    issued = at or book.as_of or datetime.now(timezone.utc).replace(tzinfo=None)
     if args.self_forecast:
-        issued = at or book.as_of or datetime.now(timezone.utc).replace(tzinfo=None)
         # THE HORIZON IN STEPS, which is what `predict` scales by and what the
         # CLI never passed. `steps_ahead` defaulted to 1, so the filed
         # quantiles were ONE-STEP residuals -- fifteen minutes on this corpus
@@ -183,7 +197,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # raised against it. Adding it here would declare a desk model that never
     # owes anything and never sends anything as a producer.
     producers = {r.model_id for r in records if r.usable}
-    session = EngineSession()
+    # A LEDGER THAT OUTLIVES THE RUN, or nothing here is ever graded. Every
+    # forecast this run files -- the desk's, the yardsticks', the engine's own
+    # -- matures an hour after the instant being audited, and the default
+    # ledger dies with the process: measured on the shipped corpus, 22
+    # recorded, 22 pending, 0 graded, every score null. The mirror a later
+    # audit grades against is that later register's own history, which is why
+    # the readings need no store of their own.
+    if args.ledger:
+        from arbiter_engine import SqlitePredictionLedger
+        session = EngineSession(ledger=SqlitePredictionLedger(args.ledger))
+    else:
+        session = EngineSession()
     session.load_model(build_model(models=sorted(producers),
                                    expected_from=sorted(set(args.expected_from))))
     for account in included:
@@ -225,6 +250,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                                  at=at, source=MODEL_ID)
         else:
             reference_fed = {}
+        # AFTER the history is fed and BEFORE the forecaster figures are:
+        # the learner forecasts every series the session holds, and the
+        # figures are series too.
+        learner = _learner(session, coverage, issued, at) if args.learner else {}
         # THE FORECASTER IS AN ENTITY LIKE ANY OTHER, which is the claim the
         # generated model has been making with nobody to back it: it declared a
         # `ForecastModel` type with six indicators and this never created one,
@@ -267,9 +296,59 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                               # though a desk had sent it.
                               "model_id": MODEL_ID if reference_rows else None,
                               "yardsticks": int(fed.get("baselines", 0))
-                                            + int(reference_fed.get("baselines", 0))})
+                                            + int(reference_fed.get("baselines", 0))
+                                            + int(learner.get("baselines", 0))},
+                   learner=learner,
+                   ledger=args.ledger,
+                   producers=sorted(producers))
     print(to_json(report) if args.json else render(report))
     return result.exit_code
+
+
+def _learner(session, coverage, issued, at) -> dict:
+    """File the engine's reference producer beside the desk's forecasts.
+
+    A RANDOM WALK IS THE RIGHT FLOOR AND A POOR OPPONENT -- the engine's own
+    words for why it ships this. Anything that notices a balance is going
+    somewhere beats one, so a desk model scored only against the random walk
+    has shown almost nothing. The learner is the next thing up: Holt's method
+    with a damped trend, fitted to each account's own history.
+
+    IT GETS WHAT THE REFERENCE GETS AND NOTHING MORE. It reads the session the
+    engine holds, and its records go through `feed` like everyone's, so it
+    reaches only the pairs the desk already covered: a yardstick that filled a
+    hole would be this package answering for the producer it measures. It is
+    filed under its own `source`, so the engine scores it and never runs the
+    shadow axioms over it -- the same rule that stopped the reference failing
+    the audit it is a control inside.
+
+    A DEEP IMPORT, RECORDED AS ONE. The engine names this module as the
+    producer it ships and does not re-export it; if it moves, this reports that
+    it filed nothing and why, and the audit is unaffected.
+    """
+    from .audit import feed
+    try:
+        from arbiter_engine.producers.baseline_learner import (
+            BASELINE_MODEL_ID, MINIMUM_POINTS, forecast_session)
+    except ImportError as exc:
+        return {"fed": 0, "model_id": None,
+                "reason": (f"this engine carries no reference producer at "
+                           f"arbiter_engine.producers.baseline_learner ({exc}); "
+                           f"it shipped there in 0.2.7")}
+    records = forecast_session(session, horizon_s=REFERENCE_HORIZON_S,
+                               issued_at=issued)
+    tally = feed(session, records, coverage, at=at, source=BASELINE_MODEL_ID)
+    out = {"fed": int(tally.get("filed", 0)), "model_id": BASELINE_MODEL_ID,
+           "forecast": len(records), "baselines": int(tally.get("baselines", 0))}
+    if not out["fed"]:
+        out["reason"] = (
+            f"the learner forecast nothing: it needs at least {MINIMUM_POINTS} "
+            f"readings placed in time per account, and no account had them -- "
+            f"a register with no `history_interval_s` places none"
+            if not records else
+            f"the learner forecast {len(records)} series and none is a pair "
+            f"the desk covered with a usable forecast")
+    return out
 
 
 if __name__ == "__main__":  # pragma: no cover
