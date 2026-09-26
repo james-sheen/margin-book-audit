@@ -17,7 +17,14 @@ keywords = ["forecast", "calibration", "margin", "audit", "arbiter"]
 # asserts rather than describes: `tests/test_stage_one_is_dependency_free.py`
 # imports every stage-one module with the engine made unimportable and runs the
 # whole classification path.
-dependencies = ["presence-audit>=0.1.8,<0.2"]
+#
+# THE CORE'S FLOOR IS 0.1.13 FOR THE FAMILY, NOT FOR THIS CODE. Nothing here
+# reads a name that release renamed -- this package takes `exit_contract` and
+# the envelope's schema constant, both unchanged -- and 0.1.8 still works. The
+# floor moves so that the core's 0.2.0, which removes the old names, can close
+# its reading window: that happens once every consumer's floor is at the release
+# that introduced the new ones. THE CEILING IS 0.3, run against a 0.2.0 build.
+dependencies = ["presence-audit>=0.1.13,<0.3"]
 
 [project.optional-dependencies]
 # THE FLOOR IS 0.1.18 AND THE REASON IS MEASURED, not a preference. One thing

@@ -4,6 +4,15 @@ Notable changes to `margin-book-audit`.
 
 ## [Unreleased]
 
+## [0.1.5] — 2026-09-26
+
+### Changed
+
+- **Requires `presence-audit>=0.1.13,<0.3`.** Nothing this package reads was
+  renamed in 0.1.13; the floor moves with the family so that the core's 0.2.0
+  can remove the old names, and the ceiling admits 0.2.0, which this suite was
+  run against.
+
 ## [0.1.4] — 2026-09-26
 
 **Nothing this package filed had ever been graded.** Every forecast a run files
