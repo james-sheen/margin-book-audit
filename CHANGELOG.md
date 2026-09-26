@@ -4,6 +4,8 @@ Notable changes to `margin-book-audit`.
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-09-26
+
 **Nothing this package filed had ever been graded.** Every forecast a run files
 matures an hour after the instant it audits, and the engine's default ledger
 dies with the process -- measured on the shipped corpus, 22 recorded, 22
