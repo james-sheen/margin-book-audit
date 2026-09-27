@@ -4,6 +4,8 @@ Notable changes to `margin-book-audit`.
 
 ## [Unreleased]
 
+## [0.1.6] — 2026-09-27
+
 ### Fixed
 
 - **A register with no readable account is refused in both stages, by cause.**
