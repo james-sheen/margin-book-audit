@@ -4,6 +4,18 @@ Notable changes to `margin-book-audit`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A register with no readable account is refused in both stages, by cause.**
+  `--coverage-only` printed `exit 0 (complete)` over zero pairs expected, for a
+  register holding no accounts and for one whose rows named none; the full audit
+  refused on the engine's missing `forecasts` leg. Both now exit 2 naming the
+  register, and the rows it could not read.
+- **Rows that cannot be read are counted, not dropped.** A register row that is
+  not an object or names no account, and a feed row that is not an object, were
+  skipped without a word; `not_established.unread_rows` now lists each by
+  position, and the text report counts them.
+
 ## [0.1.5] — 2026-09-26
 
 ### Changed

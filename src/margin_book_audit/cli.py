@@ -97,13 +97,26 @@ def _history_note(book) -> dict:
     }
 
 
+def _no_book(book) -> str:
+    """Why a register with no readable account cannot be audited, by cause."""
+    if book.unread:
+        shown = "; ".join(book.unread[:3]) + (
+            f"; and {len(book.unread) - 3} more" if len(book.unread) > 3 else "")
+        held = (f"the register holds {len(book.unread)} row(s) and none is a "
+                f"readable account ({shown})")
+    else:
+        held = "the register holds no accounts"
+    return (f"{held}, so no forecast can be expected of anyone; an audit of an "
+            f"empty book would read the same as a clean one")
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = _parser().parse_args(argv)
     from .adapter import from_predictions, from_records
     from .coverage import classify, unregistered
     from .forecaster import MODEL_ID, predict
     from .model import build_model, partition
-    from .records import load, read_book, read_feed
+    from .records import load, read_book, read_feed_rows
     from .report import build, render, to_json
 
     from .records import parse_timestamp
@@ -115,7 +128,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     try:
         book = read_book(load(args.register))
-        records = read_feed(load(args.feed)) if args.feed else []
+        records, feed_unread = (read_feed_rows(load(args.feed)) if args.feed
+                                else ([], []))
     except (OSError, ValueError) as exc:
         print(f"could not read input: {exc}", file=sys.stderr)
         return INCOMPLETE
@@ -140,6 +154,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # the off-by-k slice that used to build it is gone with the slice.
     coverage = classify(included, records)
     stray = unregistered(accounts, records)
+    unread = {"register": list(book.unread), "feed": list(feed_unread)}
+
+    # A REGISTER WITH NO READABLE ACCOUNT IS NOT A BOOK THAT OWES NOTHING, in
+    # either stage. Stage one printed `exit 0 (complete)` over zero pairs
+    # expected, and the full audit stopped on the engine's missing `forecasts`
+    # leg -- true, and three steps removed from the cause, which is the book.
+    if not accounts:
+        from .audit import Result
+        report = build(coverage, Result(exit_code=INCOMPLETE,
+                                        incomplete_reason=_no_book(book)),
+                       manifest, stray, history=_history_note(book),
+                       unread=unread)
+        print(to_json(report) if args.json else render(report))
+        return INCOMPLETE
 
     rows, _refused = from_records(records)
     reference_rows = []
@@ -174,7 +202,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.coverage_only:
         from .audit import Result
         report = build(coverage, Result(), manifest, stray,
-                       history=_history_note(book))
+                       history=_history_note(book), unread=unread)
         print(to_json(report) if args.json else render(report))
         return CLEAN
 
@@ -300,7 +328,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                                             + int(learner.get("baselines", 0))},
                    learner=learner,
                    ledger=args.ledger,
-                   producers=sorted(producers))
+                   producers=sorted(producers),
+                   unread=unread)
     print(to_json(report) if args.json else render(report))
     return result.exit_code
 

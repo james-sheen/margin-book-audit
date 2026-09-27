@@ -69,6 +69,10 @@ class Register:
     accounts: Tuple[Account, ...] = ()
     as_of: Optional[datetime] = None
     history_interval_s: Optional[float] = None
+    #: Every row that could not be read as an account, by position and why. A
+    #: row left out without a word makes the book smaller than the document,
+    #: and nothing downstream can tell a short book from a small one.
+    unread: Tuple[str, ...] = ()
 
     @property
     def history_is_placeable(self) -> bool:
@@ -132,24 +136,43 @@ def read_book(payload: Any) -> Register:
     package took, and the two facts it dropped -- `as_of` and the sampling
     interval -- are exactly what a reading needs to be placed in time.
     """
-    accounts = tuple(read_register(payload))
+    found, unread = read_register_rows(payload)
+    accounts = tuple(found)
     if not isinstance(payload, Mapping):
-        return Register(accounts)
+        return Register(accounts, unread=tuple(unread))
     return Register(
         accounts,
         as_of=parse_timestamp(payload.get("as_of")),
-        history_interval_s=_number(payload.get("history_interval_s")))
+        history_interval_s=_number(payload.get("history_interval_s")),
+        unread=tuple(unread))
 
 
 def read_register(payload: Any) -> List[Account]:
-    """Accounts from a register document. Unreadable rows are skipped by id."""
+    """Accounts from a register document. A row that is not one is left out,
+    and `read_register_rows` says which and why."""
+    return read_register_rows(payload)[0]
+
+
+def read_register_rows(payload: Any) -> Tuple[List[Account], List[str]]:
+    """Accounts, and every row that could not be read as one, by position.
+
+    SKIPPED, AND SAID. Rows that were not objects or named no account were
+    skipped here without a word, so a register of eight rows none of which
+    named an account read as a book of no accounts -- the same thing, to
+    every stage after this one, as a desk with nothing on it.
+    """
     rows = payload.get("accounts") if isinstance(payload, Mapping) else payload
     accounts: List[Account] = []
-    for row in rows or []:
+    unread: List[str] = []
+    for index, row in enumerate(rows or []):
         if not isinstance(row, Mapping):
+            unread.append(f"accounts[{index}] is {type(row).__name__}, not an "
+                          f"object")
             continue
         account_id = str(row.get("id") or row.get("account_id") or "").strip()
         if not account_id:
+            unread.append(f"accounts[{index}] names no account (no `id` or "
+                          f"`account_id`)")
             continue
         history = tuple(
             value for value in (_number(v) for v in row.get("history") or ())
@@ -160,7 +183,7 @@ def read_register(payload: Any) -> List[Account]:
             requirement=_number(row.get("margin_requirement")),
             forecast_expected=bool(row.get("forecast_expected", True)),
             history=history))
-    return accounts
+    return accounts, unread
 
 
 def read_feed(payload: Any) -> List[ForecastRecord]:
@@ -171,10 +194,24 @@ def read_feed(payload: Any) -> List[ForecastRecord]:
     vocabulary answers *was it scored, and against what*, and the two are
     reported separately so a desk can tell a producer bug from a modelling gap.
     """
+    return read_feed_rows(payload)[0]
+
+
+def read_feed_rows(payload: Any) -> Tuple[List[ForecastRecord], List[str]]:
+    """Forecast records, and every row that was not an object, by position.
+
+    A record that names no account is still a record and is carried with its
+    reason. A row that is not an object is not a record at all, and it was
+    skipped without a word; it is counted now, for the reason the register's
+    are.
+    """
     rows = payload.get("forecasts") if isinstance(payload, Mapping) else payload
     out: List[ForecastRecord] = []
-    for row in rows or []:
+    unread: List[str] = []
+    for index, row in enumerate(rows or []):
         if not isinstance(row, Mapping):
+            unread.append(f"forecasts[{index}] is {type(row).__name__}, not an "
+                          f"object")
             continue
         quantiles = {
             str(k): v for k, v in (row.get("quantiles") or {}).items()
@@ -234,7 +271,7 @@ def read_feed(payload: Any) -> List[ForecastRecord]:
             account_id=account_id, prop=str(row.get("property") or "margin_balance"),
             issued_at=issued_at, horizon_s=horizon_s, quantiles=quantiles,
             samples=samples, mean=mean, sigma=sigma, unusable=reason, raw=dict(row)))
-    return out
+    return out, unread
 
 
 def load(path: str) -> Any:

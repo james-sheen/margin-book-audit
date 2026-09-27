@@ -30,7 +30,8 @@ def build(coverage: Coverage, result: Result, manifest: Manifest,
           reference: Mapping[str, Any] = None,
           learner: Mapping[str, Any] = None,
           ledger: str = None,
-          producers: Sequence[str] = ()) -> Dict[str, Any]:
+          producers: Sequence[str] = (),
+          unread: Mapping[str, Sequence[str]] = None) -> Dict[str, Any]:
     leg = result.leg or {}
     checked = leg.get("checked") if isinstance(leg.get("checked"), Mapping) else {}
     shadow = result.shadow or {}
@@ -117,6 +118,11 @@ def build(coverage: Coverage, result: Result, manifest: Manifest,
             "excluded_from_model": manifest.as_dict()["excluded"],
             "forecast_for_unregistered_account": list(unregistered),
             "history": dict(history or {}),
+            # ROWS NOBODY COULD READ, by position and why. Counted rather than
+            # dropped, because a row left out without a word makes the book
+            # or the feed smaller than the document that carried it.
+            "unread_rows": {name: list(rows)
+                            for name, rows in (unread or {}).items()},
         },
     }
 
@@ -136,6 +142,11 @@ def render(report: Mapping[str, Any]) -> str:
         f"  findings            {len(checked['findings'])}",
         f"  declined            {len(report['declined'])}",
     ]
+    for name, rows in sorted((report["not_established"].get("unread_rows")
+                              or {}).items()):
+        if rows:
+            lines.append(f"  {name + ' unread':<20}{len(rows)} -- {rows[0]}"
+                         + (f"; and {len(rows) - 1} more" if len(rows) > 1 else ""))
     history = report["not_established"].get("history") or {}
     if history and not history.get("placed"):
         absent = ", ".join(history.get("missing") or ["?"])
