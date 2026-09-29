@@ -26,4 +26,4 @@ def engine_available() -> bool:
 
 needs_engine = pytest.mark.skipif(
     not engine_available(),
-    reason="the engine extra is not installed: pip install 'margin-book-audit[engine]'")
+    reason="the engine extra is not installed: pip install '.[engine]'")
