@@ -62,7 +62,7 @@ assumption about sampling into somebody else's book.
 ## Use
 
 ```bash
-git clone --branch v0.1.6 https://github.com/james-sheen/margin-book-audit
+git clone --branch v0.1.7 https://github.com/james-sheen/margin-book-audit
 cd margin-book-audit
 pip install '.[engine]'     # not on PyPI: this installs the release you cloned
 margin-book-audit register.json feed.json

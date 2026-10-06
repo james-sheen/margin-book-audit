@@ -4,6 +4,8 @@ Notable changes to `margin-book-audit`.
 
 ## [Unreleased]
 
+## [0.1.7] — 2026-10-06
+
 ### Fixed
 
 - **`--coverage-only` exits 1 on an unscorable or absent pair.** It exited 0 whatever
