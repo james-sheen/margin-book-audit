@@ -4,6 +4,13 @@ Notable changes to `margin-book-audit`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`--coverage-only` exits 1 on an unscorable or absent pair.** It exited 0 whatever
+  coverage said, so the shipped corpus -- one pair of each -- read clean in stage one
+  and 1 in the full audit. Both stages now agree; excluded accounts and forecasts for
+  unregistered ones stay reported and do not raise the exit.
+
 ## [0.1.6] — 2026-09-27
 
 ### Fixed

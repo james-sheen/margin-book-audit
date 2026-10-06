@@ -14,7 +14,7 @@ import pytest
 
 from conftest import AS_OF, CORPUS, needs_engine
 from margin_book_audit.cli import main
-from margin_book_audit.floors import CLEAN, FINDINGS, INCOMPLETE
+from margin_book_audit.floors import FINDINGS, INCOMPLETE
 from margin_book_audit.records import (read_book, read_feed, read_feed_rows,
                                        read_register, read_register_rows)
 
@@ -67,9 +67,11 @@ class TestStageOneRefusesAnEmptyBook:
         assert "exit 2  (INCOMPLETE)" in out and "holds no accounts" in out
 
     def test_the_shipped_book_is_unchanged(self, capsys):
-        """The control: stage one on a real book still completes."""
+        """The control: stage one on a real book still completes -- and reports
+        the corpus's unscorable and absent pair as findings, as the full audit
+        does."""
         code, report = _run(capsys, CORPUS / "register.json", "--coverage-only")
-        assert code == CLEAN and report["complete"] is True
+        assert code == FINDINGS and report["complete"] is True
         assert report["not_established"]["unread_rows"] == {"register": [],
                                                             "feed": []}
 
@@ -93,7 +95,7 @@ class TestUnreadRowsAreCountedNotDropped:
     def test_a_partly_unreadable_register_names_each_row(self, tmp_path, capsys):
         rows = REGISTER["accounts"][:6] + ["not-a-row", {"margin_balance": 1.0}]
         code, report = _run(capsys, _register(tmp_path, rows), "--coverage-only")
-        assert code == CLEAN, "the six readable accounts still audit"
+        assert code == FINDINGS, "the six readable accounts still audit, gaps and all"
         assert report["not_established"]["unread_rows"]["register"] == [
             "accounts[6] is str, not an object",
             "accounts[7] names no account (no `id` or `account_id`)"]

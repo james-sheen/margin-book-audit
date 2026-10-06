@@ -43,9 +43,14 @@ jobs:
             exit 1
           fi
           echo "engine absent, as this job requires"
-      - run: |
+      - name: stage one answers, and reports the corpus's two gaps
+        run: |
+          set +e
           python -m margin_book_audit.cli \
             corpus/register.json corpus/feed.json --coverage-only
+          code=$?
+          set -e
+          test "$code" = "1" || { echo "expected 1, the corpus's unscorable and absent pair; got $code"; exit 1; }
       - name: and the full run must decline cleanly rather than traceback
         run: |
           set +e

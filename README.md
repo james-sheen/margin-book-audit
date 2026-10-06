@@ -77,6 +77,9 @@ Stage one needs no engine at all:
 margin-book-audit register.json feed.json --coverage-only
 ```
 
+It exits 1 when any expected pair is unscorable or absent, as the full audit does, and
+0 when every one is scorable.
+
 `--as-of <ISO8601>` evaluates at a fixed instant. Staleness and lookback are
 both measured from *now*, so a fixture built on the wall clock gives a different
 answer every hour; the corpus runs pass it and live runs do not.

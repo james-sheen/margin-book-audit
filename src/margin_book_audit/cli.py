@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Optional, Sequence
 
 from . import ENGINE_RANGE, __version__
-from .floors import CLEAN, INCOMPLETE
+from .floors import CLEAN, FINDINGS, INCOMPLETE
 
 #: How far ahead the reference forecaster and the engine's projection both
 #: look. One literal, because these two numbers have to agree: the reference
@@ -113,7 +113,7 @@ def _no_book(book) -> str:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = _parser().parse_args(argv)
     from .adapter import from_predictions, from_records
-    from .coverage import classify, unregistered
+    from .coverage import ABSENT, UNSCORABLE, classify, unregistered
     from .forecaster import MODEL_ID, predict
     from .model import build_model, partition
     from .records import load, read_book, read_feed_rows
@@ -199,12 +199,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 predictions, issued_at=issued.isoformat(),
                 horizon_s=REFERENCE_HORIZON_S)
 
+    # THE TWO GAPS ARE THE FINDING IN STAGE ONE TOO. The table this package
+    # opens with gives each a fixer -- the producer for an unscorable pair,
+    # whoever owns coverage for an absent one -- and the exit contract calls
+    # that 1. This returned CLEAN whatever coverage said: on the shipped corpus,
+    # one pair unscorable and one absent, exit 0, where the full audit exits 1
+    # on the same two pairs. A book that is excluded or a forecast for an
+    # account nobody registered stays reported and unfloored, as it is there.
     if args.coverage_only:
         from .audit import Result
-        report = build(coverage, Result(), manifest, stray,
+        gaps = coverage.by_state(UNSCORABLE) + coverage.by_state(ABSENT)
+        code = FINDINGS if gaps else CLEAN
+        report = build(coverage, Result(exit_code=code), manifest, stray,
                        history=_history_note(book), unread=unread)
         print(to_json(report) if args.json else render(report))
-        return CLEAN
+        return code
 
     try:
         from arbiter_engine.api import (
