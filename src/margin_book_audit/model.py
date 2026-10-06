@@ -79,6 +79,12 @@ def build_model(models: Sequence[str] = (), *, max_age: str = "15m",
     forecaster's `forecasts_expected` is absent and CONSERVATION declines
     `missing_property`, which is the true answer to a question nobody
     answered.
+
+    COVERAGE IS JUDGED AGAINST THE ENGINE'S BAND, NOT A FIXED 0.05. A rate is k
+    of n graded forecasts, and with six or fewer it cannot land within 0.05 of
+    0.90, so a fixed tolerance warned on every early audit of a calibrated
+    desk. The engine publishes `coverage_90_band` beside the rate from 0.2.37:
+    how far chance alone carries it at that count.
     """
     declared = ""
     if models:
@@ -129,7 +135,10 @@ domain:
         type: NUMERIC
         axioms: [HOMEOSTASIS]
         window: 7d
-        homeostasis: {{setpoint: 0.90, tolerance: 0.05}}
+        homeostasis: {{setpoint: 0.90, tolerance: {{from_property: coverage_90_band}}}}
+      - name: coverage_90_band
+        type: NUMERIC
+        axioms: []
       - name: pinball_loss
         type: NUMERIC
         axioms: [HOMEOSTASIS]

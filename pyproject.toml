@@ -114,7 +114,15 @@ dependencies = ["presence-audit>=0.1.13,<0.3"]
 # Measured on 0.2.4 with the row: 168 passed, the same figure 0.1.18 reported
 # without it.
 #
-# THE FLOOR ROSE TO 0.2.7 ON 2026-09-26, and what binds it is a flag: `--learner`
+# THE FLOOR ROSE TO 0.2.37 ON 2026-10-06, and what binds it is the band: the
+# generated model takes coverage's tolerance from `coverage_90_band`, which the
+# engine first publishes in 0.2.37, where a later audit also stops reading the
+# forecasts it grades as stale. MEASURED: this suite against 0.2.36, the release
+# below, fails 2 tests, both of the band -- 0.2.36 cannot resolve the tolerance
+# and falls back to a learned baseline, and declines a clean book's earlier
+# forecasts as stale at its second audit.
+#
+# Before that THE FLOOR ROSE TO 0.2.7 ON 2026-09-26, and what bound it was a flag: `--learner`
 # files the engine's own reference producer, `baseline_learner`, which first
 # shipped in 0.2.7. MEASURED: this suite against 0.2.6, the highest release
 # below the floor, fails 5 tests, every one of them a test of the learner --
@@ -126,7 +134,7 @@ dependencies = ["presence-audit>=0.1.13,<0.3"]
 # LEDGER durable and takes each audit's readings from its own register, whose
 # history holds the reading a matured forecast is graded against. Measured: the
 # same two-audit bench grades identically on 0.2.7 and 0.2.9.
-engine = ["arbiter-engine>=0.2.7,<0.3"]
+engine = ["arbiter-engine>=0.2.37,<0.3"]
 
 [project.scripts]
 margin-book-audit = "margin_book_audit.cli:main"

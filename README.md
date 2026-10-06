@@ -175,8 +175,16 @@ Rungs 3 and 4 are honestly unclimbed. Nothing here has seen a real margin book.
 
 ## The pin
 
-The engine extra is `>=0.2.7,<0.3`, and every floor this package has had was
-measured rather than preferred. The binding one is now **the learner**:
+The engine extra is `>=0.2.37,<0.3`, and every floor this package has had was
+measured rather than preferred. The binding one is now **the coverage band**:
+the generated model takes coverage's tolerance from `coverage_90_band`, which
+the engine first publishes in 0.2.37, where a later audit also stops reading the
+forecasts it grades as stale. Measured against 0.2.36, the release below: 2
+tests fail, both of the band -- that release cannot resolve the tolerance and
+falls back to a learned baseline, and declines a clean book's earlier forecasts
+as stale at its second audit.
+
+Before that the binding floor was 0.2.7, **the learner**:
 `--learner` files the engine's reference producer, which first shipped in
 0.2.7. Measured against 0.2.6, the release below: 5 tests fail, every one of
 them a test of the learner, while the durable-ledger half of the same change

@@ -4,6 +4,15 @@ Notable changes to `margin-book-audit`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Coverage is judged against the engine's band, and the engine floor is 0.2.37.** The
+  generated model's fixed `tolerance: 0.05` warned on every early audit of a calibrated
+  desk, because k of n cannot land within 0.05 of 0.90 below seven graded; it now takes
+  the tolerance from `coverage_90_band`, which 0.2.37 publishes. On that release a later
+  audit also stops reading the forecasts it grades as stale, so a clean book audited
+  three times exits 0 each time, and a desk whose intervals miss is still named.
+
 ## [0.1.7] — 2026-10-06
 
 ### Fixed
