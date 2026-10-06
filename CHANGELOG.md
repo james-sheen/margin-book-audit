@@ -4,6 +4,8 @@ Notable changes to `margin-book-audit`.
 
 ## [Unreleased]
 
+## [0.1.8] — 2026-10-06
+
 ### Changed
 
 - **Coverage is judged against the engine's band, and the engine floor is 0.2.37.** The
